@@ -42,15 +42,15 @@ canvas.style.height = HEIGHT + 'px'
 canvas.width = DPI_WIDTH
 canvas.height = DPI_HEIGHT
 
-const playerUp    = animation([[48, 16], [79.5, 16]], 10)
-const playerDown  = animation([[48, 0], [79.5, 0]], 10)
-const playerRight = animation([[0, 16], [32, 16]], 10)
-const playerLeft  = animation([[0, 0], [32, 0]], 10)
+const playerUp    = animation([[50, 16], [82, 16]], 10)
+const playerDown  = animation([[50, 0], [82, 0]], 10)
+const playerRight = animation([[3, 16], [34, 16]], 10)
+const playerLeft  = animation([[1, 0], [34, 0]], 10)
 
 const player = {
     x: BLOCK_SIZE + 2,
     y: BLOCK_SIZE + 2,
-    step: 3,
+    step: 4,
     move: false,
     direction : arrowRight,
 
@@ -58,16 +58,16 @@ const player = {
         if (!this.move) {
             switch (this.direction) {
                 case arrowUp:
-                    ctx.drawImage(sprite, 64, 16, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, 66, 16, defaultSizeSprite - 4, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
                 case arrowDown:
-                    ctx.drawImage(sprite, 66, 0, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, 66, 0, defaultSizeSprite - 4, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
                 case arrowLeft:
-                    ctx.drawImage(sprite, 16, 0, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, 17, 0, defaultSizeSprite - 5, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
                 case arrowRight:
-                    ctx.drawImage(sprite, 16, 16, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, 20, 16, defaultSizeSprite - 5, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
             }
 
@@ -75,22 +75,22 @@ const player = {
             switch (this.direction) {
                 case arrowUp: {
                     const [x, y] = playerUp()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
                 }
                 case arrowDown: {
                     const [x, y] = playerDown()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
                 }
                 case arrowLeft: {
                     const [x, y] = playerLeft()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
                 }
                 case arrowRight: {
                     const [x, y] = playerRight()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, player.x, player.y, BLOCK_SIZE - 2, BLOCK_SIZE - 2)
+                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, player.x, player.y, defaultSizeSprite, defaultSizeSprite + 5)
                     break
                 }
             }
