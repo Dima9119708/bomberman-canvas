@@ -22,6 +22,7 @@ const arrowRight = 'ArrowRight'
 
 const CONCRETE_WALL = 'CONCRETE_WALL'
 const BRICK_WALL = 'BRICK_WALL'
+const FREE_ZONE = 'FREE_ZONE'
 
 const FIELD = []
 const WALLS = []
@@ -69,6 +70,8 @@ const player = {
     right: true,
 
     movement() {
+        collision(this, WALLS)
+
         if (!this.move) {
             switch (this.direction) {
                 case arrowUp:
@@ -128,82 +131,75 @@ function collision(player, walls) {
         const maxX = x + BLOCK_SIZE
         const maxY = y + BLOCK_SIZE
 
-        const upMinX = player.x
-        const upMinY = player.y
-        const upMaxX = player.x + player.width
-        const upMaxY = player.y
+        const point1X = player.x
+        const point1Y = player.y
 
-        const downMinX = player.x
-        const downMinY = player.y + player.height
-        const downMaxX = player.x + player.width
-        const downMaxY = player.y + player.height
+        const point2X = player.x + player.width
+        const point2Y = player.y
 
-        const leftMinX = player.x
-        const leftMinY = player.y
-        const leftMaxX = player.x
-        const leftMaxY = player.y + player.height
+        const point3X = player.x + player.width
+        const point3Y = player.y + player.height
 
-        const rightMinX = player.x + player.width
-        const rightMinY = player.y
-        const rightMaxX = player.x + player.width
-        const rightMaxY = player.y + player.height
+        const point4X = player.x
+        const point4Y = player.y + player.height
 
         if (
-            upMinX > minX &&
-            upMinX < maxX &&
-            upMinY - player.upStep > minY &&
-            upMinY - player.upStep < maxY
+            point1X > minX &&
+            point1X < maxX &&
+            point1Y - player.upStep > minY &&
+            point1Y - player.upStep < maxY
             ||
-            upMaxX > minX &&
-            upMaxX < maxX &&
-            upMaxY - player.upStep > minY &&
-            upMaxY - player.upStep < maxY
+            point2X > minX &&
+            point2X < maxX &&
+            point2Y - player.upStep > minY &&
+            point2Y - player.upStep < maxY
         ) {
-            player.upStep = upMaxY - maxY
+            player.upStep = point1Y - maxY
         }
         else if (
-            downMinX > minX &&
-            downMinX < maxX &&
-            downMinY + player.downStep > minY &&
-            downMinY + player.downStep < maxY
+            point3X > minX &&
+            point3X < maxX &&
+            point3Y + player.downStep > minY &&
+            point3Y + player.downStep < maxY
             ||
-            downMaxX > minX &&
-            downMaxX < maxX &&
-            downMaxY + player.downStep > minY &&
-            downMaxY + player.downStep < maxY
+            point4X > minX &&
+            point4X < maxX &&
+            point4Y + player.downStep > minY &&
+            point4Y + player.downStep < maxY
         ) {
-            player.downStep = minY - downMinY
+            player.downStep = minY - point3Y
         }
         else if (
-            leftMinX - player.leftStep > minX &&
-            leftMinX - player.leftStep < maxX &&
-            leftMinY > minY &&
-            leftMinY < maxY
+            point1X - player.leftStep > minX &&
+            point1X - player.leftStep < maxX &&
+            point1Y > minY &&
+            point1Y < maxY
             ||
-            leftMaxX - player.leftStep > minX &&
-            leftMaxX - player.leftStep < maxX &&
-            leftMaxY > minY &&
-            leftMaxY < maxY
+            point4X - player.leftStep > minX &&
+            point4X - player.leftStep < maxX &&
+            point4Y > minY &&
+            point4Y < maxY
         ) {
-            player.leftStep = leftMaxX - maxX
+            player.leftStep = point4X - maxX
         }
         else if (
-            rightMinX + player.rightStep > minX &&
-            rightMinX + player.rightStep < maxX &&
-            rightMinY > minY &&
-            rightMinY < maxY
+            point2X + player.rightStep > minX &&
+            point2X + player.rightStep < maxX &&
+            point2Y > minY &&
+            point2Y < maxY
             ||
-            rightMaxX + player.rightStep > minX &&
-            rightMaxX + player.rightStep < maxX &&
-            rightMaxY > minY &&
-            rightMaxY < maxY
+            point3X + player.rightStep > minX &&
+            point3X + player.rightStep < maxX &&
+            point3Y > minY &&
+            point3Y < maxY
         ) {
-            player.rightStep = minX - rightMaxX
+            player.rightStep = minX - point3X
         }
     }
 }
 
 function setupField() {
+
     for (let y = 0; y < BLOCKS_Y; y++ ) {
         FIELD[y] = []
         for (let x = 0; x < BLOCKS_X; x++) {
@@ -226,11 +222,18 @@ function setupField() {
                 FIELD[y][x] = CONCRETE_WALL
             }
 
+            if (FIELD[y][x] !== CONCRETE_WALL &&
+                y % 5 === 0 && x % 5 === 0
+            ) {
+                FIELD[y][x] = BRICK_WALL
+            }
+
             if (FIELD[y][x] === CONCRETE_WALL) {
                 WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
             }
         }
     }
+
 }
 
 function drawField() {
@@ -241,6 +244,10 @@ function drawField() {
             switch (FIELD[y][x]) {
                 case CONCRETE_WALL:
                     drawImage(48, 48, x, y)
+                    break
+
+                case BRICK_WALL:
+                    drawImage(64, 48, x, y)
                     break
             }
         }
@@ -272,7 +279,6 @@ function render() {
 
     setupField()
     drawField()
-    collision(player, WALLS)
 
     player.movement()
 
