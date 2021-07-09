@@ -9,10 +9,11 @@ const loadSprite = (sprite) => {
 
 const sprite = loadSprite(img)
 
-const WIDTH = 300
+const WIDTH = 500
 const HEIGHT = 300
 const DPI_WIDTH = WIDTH * 1.2
 const DPI_HEIGHT = HEIGHT * 1.2
+
 const defaultSizeSprite = 16
 
 const arrowUp = 'ArrowUp'
@@ -27,13 +28,15 @@ const FREE_ZONE = 'FREE_ZONE'
 const FIELD = []
 const WALLS = []
 
-const BLOCK_SIZE = 27
+const BLOCKS_X = 31
+const BLOCKS_Y = 13
 
-const BLOCKS_X = Math.round(DPI_WIDTH / BLOCK_SIZE)
-const BLOCKS_Y = Math.round(DPI_HEIGHT / BLOCK_SIZE)
+const BLOCK_SIZE = Number((DPI_HEIGHT / BLOCKS_Y).toFixed(1))
 
 const LENGTH_X = BLOCKS_X - 1
 const LENGTH_Y = BLOCKS_Y - 1
+
+const MAX_WIDTH = BLOCKS_X * BLOCK_SIZE
 
 const canvas = document.querySelector('[data-el="main"]');
 const ctx = canvas.getContext('2d')
@@ -111,6 +114,36 @@ const player = {
                     break
                 }
             }
+        }
+    }
+}
+
+const camera = {
+    w: DPI_WIDTH,
+
+    translateX(
+        player,
+        speed = 1,
+        percentR = 50,
+        percentL = 50,
+    ) {
+
+        const rightPoint = player.x
+        const leftPoint = player.x + player.width
+
+        const startPointX = this.w - DPI_WIDTH
+
+        const pointRTranslate = startPointX + (DPI_WIDTH * percentR) / 100
+        const pointLTranslate = startPointX + (DPI_WIDTH * percentL) / 100
+
+        if (rightPoint > pointRTranslate && this.w < MAX_WIDTH) {
+            ctx.translate(-speed, 0)
+            this.w += speed
+        }
+
+        if (leftPoint < pointLTranslate && this.w > DPI_WIDTH) {
+            ctx.translate(speed, 0)
+            this.w -= speed
         }
     }
 }
@@ -281,6 +314,7 @@ function render() {
     drawField()
 
     player.movement()
+    camera.translateX(player, 2)
 
     requestAnimationFrame(render)
 }
