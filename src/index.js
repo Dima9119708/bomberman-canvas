@@ -21,12 +21,18 @@ const arrowDown = 'ArrowDown'
 const arrowLeft = 'ArrowLeft'
 const arrowRight = 'ArrowRight'
 
-const CONCRETE_WALL = 'CONCRETE_WALL'
-const BRICK_WALL = 'BRICK_WALL'
-const FREE_ZONE = 'FREE_ZONE'
+const CONCRETE_WALL = 'CONCRETE_WALL' // не взрываються
+const BRICK_WALL = 'BRICK_WALL' // Взрывающие стены
+const EMPTY = 'FREE_ZONE'
 
 const FIELD = []
 const WALLS = []
+const BRICK_WALLS = {
+    switch: true,
+    walls: []
+}
+
+const RANDOM_NUMBER = 1.5
 
 const BLOCKS_X = 31
 const BLOCKS_Y = 13
@@ -124,8 +130,8 @@ const camera = {
     translateX(
         player,
         speed = 1,
-        percentR = 50,
         percentL = 50,
+        percentR = 50,
     ) {
 
         const rightPoint = player.x
@@ -150,6 +156,10 @@ const camera = {
 
 function clear() {
     ctx.clearRect(0, 0, DPI_WIDTH, DPI_HEIGHT)
+}
+
+function randomNumber() {
+    return Math.floor(Math.random() * RANDOM_NUMBER)
 }
 
 function collision(player, walls) {
@@ -236,7 +246,7 @@ function setupField() {
     for (let y = 0; y < BLOCKS_Y; y++ ) {
         FIELD[y] = []
         for (let x = 0; x < BLOCKS_X; x++) {
-            FIELD[y].push('')
+            FIELD[y].push(EMPTY)
 
             if (y === 0) {
                 FIELD[y][x] = CONCRETE_WALL
@@ -255,10 +265,8 @@ function setupField() {
                 FIELD[y][x] = CONCRETE_WALL
             }
 
-            if (FIELD[y][x] !== CONCRETE_WALL &&
-                y % 5 === 0 && x % 5 === 0
-            ) {
-                FIELD[y][x] = BRICK_WALL
+            if (FIELD[y][x] !== CONCRETE_WALL && BRICK_WALLS.switch) {
+               BRICK_WALLS.walls.push([x, y, randomNumber()])
             }
 
             if (FIELD[y][x] === CONCRETE_WALL) {
@@ -267,6 +275,31 @@ function setupField() {
         }
     }
 
+    BRICK_WALLS.switch = false
+
+    const { walls } = BRICK_WALLS
+
+    for (const [idx, [x, y, randNum]] of walls.entries()) {
+
+        const prev3 = walls[idx - 3]?.[2]
+        const prev2 = walls[idx - 2]?.[2]
+        const prev1 = walls[idx - 1]?.[2]
+
+        if (y === 1 && x === 1 ||
+            y === 1 && x === 2 ||
+            y === 2 && x === 1
+        ) {
+            continue
+        }
+
+        if (prev1 > 0 && prev2 > 0 && prev3 > 0) {
+            continue
+        }
+
+        if (randNum > 0) {
+            FIELD[y][x] = BRICK_WALL
+        }
+    }
 }
 
 function drawField() {
