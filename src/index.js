@@ -50,7 +50,23 @@ const LENGTH_BOTS = 8
 const distanceBots = MAX_WIDTH / LENGTH_BOTS
 const DISTANCE_BOTS = []
 const LOOPS = [200, 500, 800, 1000]
-const BOTS = []
+const BOTS = {
+    persons: {
+        person1: {
+            up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 50),
+            down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 50),
+            left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 50),
+            right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 50),
+        },
+        person2: {
+            up: animation([[48, 256], [64, 256], [80, 256]], 10),
+            down: animation([[0, 256], [16, 256], [32, 256]], 10),
+            left: animation([[48, 256], [64, 256], [80, 256]], 10),
+            right: animation([[0, 256], [16, 256], [32, 256]], 10),
+        },
+    },
+    spawn: []
+}
 
 const canvas = document.querySelector('[data-el="main"]');
 const ctx = canvas.getContext('2d')
@@ -60,6 +76,7 @@ canvas.style.height = HEIGHT + 'px'
 
 canvas.width = DPI_WIDTH
 canvas.height = DPI_HEIGHT
+
 
 const person = {
     x: BLOCK_SIZE + 2,
@@ -413,7 +430,11 @@ function setupSpawnBots() {
     }
 
     POINT_SPAWN_BOTS.points.forEach( ([x, y]) =>  {
-        BOTS.push(
+        const randBotIdx = randomNumber(Object.keys(BOTS.persons).length)
+        const nameBot = Object.keys(BOTS.persons)[randBotIdx]
+        const bot = BOTS.persons[nameBot]
+
+        BOTS.spawn.push(
             { ...person, ...{
                 x: x * BLOCK_SIZE,
                 y: y * BLOCK_SIZE,
@@ -422,10 +443,10 @@ function setupSpawnBots() {
                 loop: LOOPS[randomNumber(LOOPS.length)],
                 direction : control[randomNumber(control.length)],
                 defaultStep: 0.5,
-                upAnimation: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 10),
-                downAnimation: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 10),
-                leftAnimation: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 10),
-                rightAnimation: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 10),
+                upAnimation: bot.up,
+                downAnimation: bot.down,
+                leftAnimation: bot.left,
+                rightAnimation: bot.right,
             }}
        )
     })
@@ -438,18 +459,34 @@ function drawField() {
         for (let x = 0; x < FIELD[y].length; x++) {
             ctx.beginPath();
             ctx.rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
-            ctx.fillStyle = 'green'
+            ctx.fillStyle = '#009400'
             ctx.fill()
-            ctx.strokeStyle = 'green'
+            ctx.strokeStyle = '#009400'
             ctx.lineWidth = 0
             ctx.stroke()
 
             switch (FIELD[y][x]) {
                 case CONCRETE_WALL:
+                    ctx.beginPath();
+                    ctx.rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
+                    ctx.fillStyle = '#B0B0B0'
+                    ctx.fill()
+                    ctx.strokeStyle = '#B0B0B0'
+                    ctx.lineWidth = 0
+                    ctx.stroke()
+
                     drawImage(48, 48, x, y)
                     break
 
                 case BRICK_WALL:
+                    ctx.beginPath();
+                    ctx.rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
+                    ctx.fillStyle = '#B0B0B0'
+                    ctx.fill()
+                    ctx.strokeStyle = '#B0B0B0'
+                    ctx.lineWidth = 0
+                    ctx.stroke()
+
                     drawImage(64, 48, x, y)
                     break
             }
@@ -487,7 +524,7 @@ function render() {
 
     player.movePlayer()
 
-    BOTS.forEach(bot => bot.moveBot())
+    BOTS.spawn.forEach(bot => bot.moveBot())
 
     camera.translateX(person, 2)
 
