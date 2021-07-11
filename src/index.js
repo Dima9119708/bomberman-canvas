@@ -1,5 +1,5 @@
 import './styles.scss'
-import img from './Bomberman.png'
+import bombermanImage from './Bomberman.png'
 
 const loadSprite = (sprite) => {
     const image = new Image()
@@ -7,7 +7,7 @@ const loadSprite = (sprite) => {
     return image
 }
 
-const sprite = loadSprite(img)
+const sprite = loadSprite(bombermanImage)
 
 const WIDTH = 500
 const HEIGHT = 300
@@ -65,13 +65,13 @@ const person = {
     x: BLOCK_SIZE + 2,
     y: BLOCK_SIZE + 2,
 
-    height: defaultSizeSprite + 5,
-    width: defaultSizeSprite,
+    height: 0,
+    width: 0,
 
     countLoop: 0,
     loop: null,
 
-    defaultStep: 5,
+    defaultStep: 0,
     upStep: null,
     downStep: null,
     leftStep: null,
@@ -80,10 +80,10 @@ const person = {
     move: false,
     direction : arrowRight,
 
-    upAnimation: animation([[50, 16], [82, 16]], 10),
-    downAnimation: animation([[50, 0], [82, 0]], 10),
-    leftAnimation: animation([[1, 0], [34, 0]], 10),
-    rightAnimation: animation([[3, 16], [34, 16]], 10),
+    upAnimation: null,
+    downAnimation: null,
+    leftAnimation: null,
+    rightAnimation: null,
 
     movePlayer() {
         collision(this, WALLS)
@@ -184,7 +184,19 @@ const person = {
     }
 }
 
-const player = person
+const player = { ...person, ...{
+    x: BLOCK_SIZE + 5,
+    y: BLOCK_SIZE + 5,
+    height: defaultSizeSprite + 5,
+    width: defaultSizeSprite,
+    defaultStep: 5,
+    direction : arrowRight,
+
+    upAnimation: animation([[50, 16], [82, 16]], 10),
+    downAnimation: animation([[50, 0], [82, 0]], 10),
+    leftAnimation: animation([[1, 0], [34, 0]], 10),
+    rightAnimation: animation([[3, 16], [34, 16]], 10),
+}}
 
 const camera = {
     w: DPI_WIDTH,
@@ -424,7 +436,13 @@ function setupSpawnBots() {
 function drawField() {
     for (let y = 0; y < FIELD.length; y++ ) {
         for (let x = 0; x < FIELD[y].length; x++) {
-            drawImage(0, 70, x, y)
+            ctx.beginPath();
+            ctx.rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
+            ctx.fillStyle = 'green'
+            ctx.fill()
+            ctx.strokeStyle = 'green'
+            ctx.lineWidth = 0
+            ctx.stroke()
 
             switch (FIELD[y][x]) {
                 case CONCRETE_WALL:
@@ -433,11 +451,6 @@ function drawField() {
 
                 case BRICK_WALL:
                     drawImage(64, 48, x, y)
-                    break
-
-                case '+++':
-                    ctx.fillStyle = 'red'
-                    ctx.fillRect(x * BLOCK_SIZE, y* BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
                     break
             }
         }
@@ -502,16 +515,16 @@ document.addEventListener('keydown', listenerKeyDown)
 document.addEventListener('keyup', listenerKeyUp)
 
 function listenerKeyUp() {
-    person.move = false
+    player.move = false
 }
 
 function listenerKeyDown(e) {
     e.preventDefault();
 
-    person.move = true
-    person.direction = e.code
+    player.move = true
+    player.direction = e.code
 
-    move(person, e.code)
+    move(player, e.code)
 }
 
 function move(player, direction) {
