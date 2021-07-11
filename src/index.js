@@ -27,12 +27,12 @@ const EMPTY = 'FREE_ZONE'
 
 const FIELD = []
 const WALLS = []
-const BRICK_WALLS = {
-    switch: true,
-    walls: []
-}
+const FREE_ZONE = []
+const GROUP_FREE_ZONE = []
+const POINT_SPAWN_BOTS = { switch: true, points: [] }
+const BRICK_WALLS = { switch: true, walls: [] }
 
-const RANDOM_NUMBER = 1.5
+const RANDOM_NUMBER = 1.6
 
 const BLOCKS_X = 31
 const BLOCKS_Y = 13
@@ -44,6 +44,10 @@ const LENGTH_Y = BLOCKS_Y - 1
 
 const MAX_WIDTH = BLOCKS_X * BLOCK_SIZE
 
+const LENGTH_BOTS = 8
+const distanceBots = MAX_WIDTH / LENGTH_BOTS
+const DISTANCE_BOTS = []
+
 const canvas = document.querySelector('[data-el="main"]');
 const ctx = canvas.getContext('2d')
 
@@ -52,11 +56,6 @@ canvas.style.height = HEIGHT + 'px'
 
 canvas.width = DPI_WIDTH
 canvas.height = DPI_HEIGHT
-
-const playerUp    = animation([[50, 16], [82, 16]], 10)
-const playerDown  = animation([[50, 0], [82, 0]], 10)
-const playerRight = animation([[3, 16], [34, 16]], 10)
-const playerLeft  = animation([[1, 0], [34, 0]], 10)
 
 const player = {
     x: BLOCK_SIZE + 2,
@@ -73,10 +72,10 @@ const player = {
     move: false,
     direction : arrowRight,
 
-    up: true,
-    down: true,
-    left: true,
-    right: true,
+    upAnimation: animation([[50, 16], [82, 16]], 10),
+    downAnimation: animation([[50, 0], [82, 0]], 10),
+    leftAnimation: animation([[1, 0], [34, 0]], 10),
+    rightAnimation: animation([[3, 16], [34, 16]], 10),
 
     movement() {
         collision(this, WALLS)
@@ -100,22 +99,22 @@ const player = {
         } else {
             switch (this.direction) {
                 case arrowUp: {
-                    const [x, y] = playerUp()
+                    const [x, y] = this.upAnimation()
                     ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
                 case arrowDown: {
-                    const [x, y] = playerDown()
+                    const [x, y] = this.downAnimation()
                     ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
                 case arrowLeft: {
-                    const [x, y] = playerLeft()
+                    const [x, y] = this.leftAnimation()
                     ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
                 case arrowRight: {
-                    const [x, y] = playerRight()
+                    const [x, y] = this.rightAnimation()
                     ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
@@ -158,8 +157,15 @@ function clear() {
     ctx.clearRect(0, 0, DPI_WIDTH, DPI_HEIGHT)
 }
 
-function randomNumber() {
-    return Math.floor(Math.random() * RANDOM_NUMBER)
+function clearArrays() {
+    WALLS.length = 0
+    FREE_ZONE.length = 0
+    DISTANCE_BOTS.length = 0
+    BRICK_WALLS.switch = false
+}
+
+function randomNumber(number) {
+    return Math.floor(Math.random() * number)
 }
 
 function collision(player, walls) {
@@ -241,6 +247,14 @@ function collision(player, walls) {
     }
 }
 
+function setupDistanceBetweenBots() {
+    let prev = 0
+    for (let i = 0; i < LENGTH_BOTS; i++) {
+        DISTANCE_BOTS.push([prev, distanceBots + prev])
+        prev += distanceBots
+    }
+}
+
 function setupField() {
 
     for (let y = 0; y < BLOCKS_Y; y++ ) {
@@ -266,7 +280,7 @@ function setupField() {
             }
 
             if (FIELD[y][x] !== CONCRETE_WALL && BRICK_WALLS.switch) {
-               BRICK_WALLS.walls.push([x, y, randomNumber()])
+               BRICK_WALLS.walls.push([x, y, randomNumber(RANDOM_NUMBER)])
             }
 
             if (FIELD[y][x] === CONCRETE_WALL) {
@@ -275,10 +289,9 @@ function setupField() {
         }
     }
 
-    BRICK_WALLS.switch = false
-
     const { walls } = BRICK_WALLS
 
+    // Спавн каменных стен
     for (const [idx, [x, y, randNum]] of walls.entries()) {
 
         const prev3 = walls[idx - 3]?.[2]
@@ -298,8 +311,32 @@ function setupField() {
 
         if (randNum > 0) {
             FIELD[y][x] = BRICK_WALL
+            //WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
+        }
+
+        FREE_ZONE.push([x, y])
+    }
+}
+
+function setupSpawnBots() {
+    if (!POINT_SPAWN_BOTS.switch) return;
+
+    for (const [i, [min, max]] of DISTANCE_BOTS.entries()) {
+        GROUP_FREE_ZONE[i] = []
+
+        for (const [x, y] of FREE_ZONE) {
+            if ( (x * BLOCK_SIZE) > min && (x * BLOCK_SIZE) < max ) {
+                GROUP_FREE_ZONE[i].push([x, y])
+            }
         }
     }
+
+    for (const groupFreeZone of GROUP_FREE_ZONE) {
+        const idx = randomNumber(groupFreeZone.length)
+        POINT_SPAWN_BOTS.points.push(groupFreeZone[idx] || [])
+    }
+
+    POINT_SPAWN_BOTS.switch = false
 }
 
 function drawField() {
@@ -314,6 +351,11 @@ function drawField() {
 
                 case BRICK_WALL:
                     drawImage(64, 48, x, y)
+                    break
+
+                case '+++':
+                    ctx.fillStyle = 'red'
+                    ctx.fillRect(x * BLOCK_SIZE, y* BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
                     break
             }
         }
@@ -343,12 +385,20 @@ function animation(frames, loop = 6) {
 function render() {
     clear()
 
+    setupDistanceBetweenBots()
     setupField()
+    setupSpawnBots()
     drawField()
+
+    POINT_SPAWN_BOTS.points.forEach(([x, y]) => {
+        ctx.fillStyle = 'red'
+        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
+    })
 
     player.movement()
     camera.translateX(player, 2)
 
+    clearArrays()
     requestAnimationFrame(render)
 }
 
