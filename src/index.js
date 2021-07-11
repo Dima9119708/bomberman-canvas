@@ -21,6 +21,8 @@ const arrowDown = 'ArrowDown'
 const arrowLeft = 'ArrowLeft'
 const arrowRight = 'ArrowRight'
 
+const control = [arrowUp, arrowDown, arrowLeft, arrowRight]
+
 const CONCRETE_WALL = 'CONCRETE_WALL' // не взрываються
 const BRICK_WALL = 'BRICK_WALL' // Взрывающие стены
 const EMPTY = 'FREE_ZONE'
@@ -47,6 +49,8 @@ const MAX_WIDTH = BLOCKS_X * BLOCK_SIZE
 const LENGTH_BOTS = 8
 const distanceBots = MAX_WIDTH / LENGTH_BOTS
 const DISTANCE_BOTS = []
+const LOOPS = [200, 500, 800, 1000]
+const BOTS = []
 
 const canvas = document.querySelector('[data-el="main"]');
 const ctx = canvas.getContext('2d')
@@ -57,11 +61,15 @@ canvas.style.height = HEIGHT + 'px'
 canvas.width = DPI_WIDTH
 canvas.height = DPI_HEIGHT
 
-const player = {
+const person = {
     x: BLOCK_SIZE + 2,
     y: BLOCK_SIZE + 2,
+
     height: defaultSizeSprite + 5,
     width: defaultSizeSprite,
+
+    countLoop: 0,
+    loop: null,
 
     defaultStep: 5,
     upStep: null,
@@ -77,7 +85,7 @@ const player = {
     leftAnimation: animation([[1, 0], [34, 0]], 10),
     rightAnimation: animation([[3, 16], [34, 16]], 10),
 
-    movement() {
+    movePlayer() {
         collision(this, WALLS)
 
         if (!this.move) {
@@ -120,8 +128,63 @@ const player = {
                 }
             }
         }
+    },
+
+    moveBot() {
+        collision(this, WALLS)
+
+        this.countLoop++
+
+        const way = {
+            [arrowUp]: this.upStep,
+            [arrowDown]: this.downStep,
+            [arrowLeft]: this.leftStep,
+            [arrowRight]: this.rightStep
+        }
+
+        if (this.countLoop > this.loop) {
+            this.countLoop = 0
+            this.loop = LOOPS[randomNumber(LOOPS.length)]
+            this.randomDirection(way)
+        }
+
+        if (way[this.direction] === 0) {
+            this.randomDirection(way)
+        }
+
+        move(this, this.direction)
+
+        switch (this.direction) {
+            case arrowUp: {
+                const [x, y] = this.upAnimation()
+                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                break
+            }
+            case arrowDown: {
+                const [x, y] = this.downAnimation()
+                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                break
+            }
+            case arrowLeft: {
+                const [x, y] = this.leftAnimation()
+                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                break
+            }
+            case arrowRight: {
+                const [x, y] = this.rightAnimation()
+                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                break
+            }
+        }
+    },
+
+    randomDirection(way) {
+        const idx = randomNumber(Object.keys(way).length)
+        this.direction = Object.keys(way)[idx]
     }
 }
+
+const player = person
 
 const camera = {
     w: DPI_WIDTH,
@@ -311,10 +374,10 @@ function setupField() {
 
         if (randNum > 0) {
             FIELD[y][x] = BRICK_WALL
-            //WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
+            WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
+        } else {
+            FREE_ZONE.push([x, y])
         }
-
-        FREE_ZONE.push([x, y])
     }
 }
 
@@ -334,7 +397,26 @@ function setupSpawnBots() {
     for (const groupFreeZone of GROUP_FREE_ZONE) {
         const idx = randomNumber(groupFreeZone.length)
         POINT_SPAWN_BOTS.points.push(groupFreeZone[idx] || [])
+        groupFreeZone.splice(idx, 1)
     }
+
+    POINT_SPAWN_BOTS.points.forEach( ([x, y]) =>  {
+        BOTS.push(
+            { ...person, ...{
+                x: x * BLOCK_SIZE,
+                y: y * BLOCK_SIZE,
+                height: defaultSizeSprite + 5,
+                width: defaultSizeSprite + 5,
+                loop: LOOPS[randomNumber(LOOPS.length)],
+                direction : control[randomNumber(control.length)],
+                defaultStep: 0.5,
+                upAnimation: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 10),
+                downAnimation: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 10),
+                leftAnimation: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 10),
+                rightAnimation: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 10),
+            }}
+       )
+    })
 
     POINT_SPAWN_BOTS.switch = false
 }
@@ -390,13 +472,11 @@ function render() {
     setupSpawnBots()
     drawField()
 
-    POINT_SPAWN_BOTS.points.forEach(([x, y]) => {
-        ctx.fillStyle = 'red'
-        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
-    })
+    player.movePlayer()
 
-    player.movement()
-    camera.translateX(player, 2)
+    BOTS.forEach(bot => bot.moveBot())
+
+    camera.translateX(person, 2)
 
     clearArrays()
     requestAnimationFrame(render)
@@ -422,16 +502,21 @@ document.addEventListener('keydown', listenerKeyDown)
 document.addEventListener('keyup', listenerKeyUp)
 
 function listenerKeyUp() {
-    player.move = false
+    person.move = false
 }
 
 function listenerKeyDown(e) {
     e.preventDefault();
 
-    player.move = true
-    player.direction = e.code
+    person.move = true
+    person.direction = e.code
 
-    switch(e.code) {
+    move(person, e.code)
+}
+
+function move(player, direction) {
+
+    switch(direction) {
         case arrowUp:
             player.y -= player.upStep
             break
