@@ -1,13 +1,15 @@
 import './styles.scss'
-import bombermanImage from './Bomberman.png'
+import bgWithout from './bomberman-without-bg.png'
+import bgWith from './bomberman-with-bg.png'
 
-const loadSprite = (sprite) => {
+const loadSprite = (spriteWithoutBG) => {
     const image = new Image()
-    image.src = sprite
+    image.src = spriteWithoutBG
     return image
 }
 
-const sprite = loadSprite(bombermanImage)
+const spriteWithBG = loadSprite(bgWith)
+const spriteWithoutBG = loadSprite(bgWithout)
 
 const WIDTH = 500
 const HEIGHT = 300
@@ -20,8 +22,9 @@ const arrowUp = 'ArrowUp'
 const arrowDown = 'ArrowDown'
 const arrowLeft = 'ArrowLeft'
 const arrowRight = 'ArrowRight'
+const keyF = 'KeyF'
 
-const control = [arrowUp, arrowDown, arrowLeft, arrowRight]
+const control = [arrowUp, arrowDown, arrowLeft, arrowRight, keyF]
 
 const CONCRETE_WALL = 'CONCRETE_WALL' // не взрываються
 const BRICK_WALL = 'BRICK_WALL' // Взрывающие стены
@@ -38,7 +41,6 @@ const RANDOM_NUMBER = 1.6
 
 const BLOCKS_X = 31
 const BLOCKS_Y = 13
-
 const BLOCK_SIZE = Number((DPI_HEIGHT / BLOCKS_Y).toFixed(1))
 
 const LENGTH_X = BLOCKS_X - 1
@@ -49,20 +51,21 @@ const MAX_WIDTH = BLOCKS_X * BLOCK_SIZE
 const LENGTH_BOTS = 8
 const distanceBots = MAX_WIDTH / LENGTH_BOTS
 const DISTANCE_BOTS = []
-const LOOPS = [200, 500, 800, 1000]
+
 const BOTS = {
+    loops: [200, 500, 800, 1000],
     persons: {
         person1: {
-            up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 50),
-            down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 50),
-            left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 50),
-            right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 50),
+            up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
+            down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
+            left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
+            right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
         },
         person2: {
-            up: animation([[48, 256], [64, 256], [80, 256]], 10),
-            down: animation([[0, 256], [16, 256], [32, 256]], 10),
-            left: animation([[48, 256], [64, 256], [80, 256]], 10),
-            right: animation([[0, 256], [16, 256], [32, 256]], 10),
+            up: animation([[48, 256], [64, 256], [80, 256]], 20),
+            down: animation([[0, 256], [16, 256], [32, 256]], 20),
+            left: animation([[48, 256], [64, 256], [80, 256]], 20),
+            right: animation([[0, 256], [16, 256], [32, 256]], 20),
         },
     },
     spawn: []
@@ -77,7 +80,6 @@ canvas.style.height = HEIGHT + 'px'
 canvas.width = DPI_WIDTH
 canvas.height = DPI_HEIGHT
 
-
 const person = {
     x: BLOCK_SIZE + 2,
     y: BLOCK_SIZE + 2,
@@ -85,16 +87,12 @@ const person = {
     height: 0,
     width: 0,
 
-    countLoop: 0,
-    loop: null,
-
     defaultStep: 0,
     upStep: null,
     downStep: null,
     leftStep: null,
     rightStep: null,
 
-    move: false,
     direction : arrowRight,
 
     upAnimation: null,
@@ -108,16 +106,16 @@ const person = {
         if (!this.move) {
             switch (this.direction) {
                 case arrowUp:
-                    ctx.drawImage(sprite, 66, 16, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, 66, 16, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 case arrowDown:
-                    ctx.drawImage(sprite, 66, 0, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, 66, 0, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 case arrowLeft:
-                    ctx.drawImage(sprite, 17, 0, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, 17, 0, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 case arrowRight:
-                    ctx.drawImage(sprite, 20, 16, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, 20, 16, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
             }
 
@@ -125,22 +123,22 @@ const person = {
             switch (this.direction) {
                 case arrowUp: {
                     const [x, y] = this.upAnimation()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
                 case arrowDown: {
                     const [x, y] = this.downAnimation()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
                 case arrowLeft: {
                     const [x, y] = this.leftAnimation()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
                 case arrowRight: {
                     const [x, y] = this.rightAnimation()
-                    ctx.drawImage(sprite, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
             }
@@ -161,7 +159,7 @@ const person = {
 
         if (this.countLoop > this.loop) {
             this.countLoop = 0
-            this.loop = LOOPS[randomNumber(LOOPS.length)]
+            this.loop = BOTS.loops[randomNumber(BOTS.loops.length)]
             this.randomDirection(way)
         }
 
@@ -174,22 +172,22 @@ const person = {
         switch (this.direction) {
             case arrowUp: {
                 const [x, y] = this.upAnimation()
-                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
                 break
             }
             case arrowDown: {
                 const [x, y] = this.downAnimation()
-                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
                 break
             }
             case arrowLeft: {
                 const [x, y] = this.leftAnimation()
-                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
                 break
             }
             case arrowRight: {
                 const [x, y] = this.rightAnimation()
-                ctx.drawImage(sprite, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
                 break
             }
         }
@@ -208,11 +206,72 @@ const player = { ...person, ...{
     width: defaultSizeSprite,
     defaultStep: 5,
     direction : arrowRight,
+    move: false,
+
+    activeBomb: false,
+    countBom: 0,
+    timeBom: 180,
+    bombX: 1,
+    bombY: 1,
 
     upAnimation: animation([[50, 16], [82, 16]], 10),
     downAnimation: animation([[50, 0], [82, 0]], 10),
     leftAnimation: animation([[1, 0], [34, 0]], 10),
     rightAnimation: animation([[3, 16], [34, 16]], 10),
+    bombAnimation: animation([[0, 48], [16, 48], [31.5, 48]], 10),
+
+    plantBomb() {
+        if (this.activeBomb) {
+            this.detonationBom()
+            this.drawBomb()
+            return
+        }
+
+        const playerX = this.x + (this.width / 2)
+        const playerY = this.y + (this.height / 2)
+
+        for (const [x, y] of FREE_ZONE) {
+            const minX = x * BLOCK_SIZE
+            const minY = y * BLOCK_SIZE
+            const maxX = x * BLOCK_SIZE + BLOCK_SIZE
+            const maxY = y * BLOCK_SIZE + BLOCK_SIZE
+
+            if (
+                playerX > minX && playerX < maxX &&
+                playerY > minY && playerY < maxY
+            ) {
+
+                this.bombX = x
+                this.bombY = y
+
+                break
+            }
+        }
+    },
+
+    detonationBom() {
+        this.countBom++
+
+        if (this.countBom >= this.timeBom) {
+            this.countBom = 0
+            this.activeBomb = false
+        }
+    },
+
+    drawBomb() {
+        const [ x, y ] = this.bombAnimation()
+        ctx.drawImage(
+            spriteWithBG,
+            x,
+            y,
+            defaultSizeSprite,
+            defaultSizeSprite,
+            this.bombX * BLOCK_SIZE + 5,
+            this.bombY * BLOCK_SIZE + 5,
+            defaultSizeSprite + 5,
+            defaultSizeSprite + 5
+        )
+    }
 }}
 
 const camera = {
@@ -340,7 +399,7 @@ function collision(player, walls) {
 }
 
 function setupDistanceBetweenBots() {
-    let prev = 0
+    let prev = distanceBots
     for (let i = 0; i < LENGTH_BOTS; i++) {
         DISTANCE_BOTS.push([prev, distanceBots + prev])
         prev += distanceBots
@@ -390,6 +449,10 @@ function setupField() {
         const prev2 = walls[idx - 2]?.[2]
         const prev1 = walls[idx - 1]?.[2]
 
+        if (randNum === 0) {
+            FREE_ZONE.push([x, y])
+        }
+
         if (y === 1 && x === 1 ||
             y === 1 && x === 2 ||
             y === 2 && x === 1
@@ -403,9 +466,7 @@ function setupField() {
 
         if (randNum > 0) {
             FIELD[y][x] = BRICK_WALL
-            WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
-        } else {
-            FREE_ZONE.push([x, y])
+            //WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
         }
     }
 }
@@ -440,7 +501,8 @@ function setupSpawnBots() {
                 y: y * BLOCK_SIZE,
                 height: defaultSizeSprite + 5,
                 width: defaultSizeSprite + 5,
-                loop: LOOPS[randomNumber(LOOPS.length)],
+                countLoop: 0,
+                loop: BOTS.loops[randomNumber(BOTS.loops.length)],
                 direction : control[randomNumber(control.length)],
                 defaultStep: 0.5,
                 upAnimation: bot.up,
@@ -457,37 +519,45 @@ function setupSpawnBots() {
 function drawField() {
     for (let y = 0; y < FIELD.length; y++ ) {
         for (let x = 0; x < FIELD[y].length; x++) {
-            ctx.beginPath();
-            ctx.rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
-            ctx.fillStyle = '#009400'
-            ctx.fill()
-            ctx.strokeStyle = '#009400'
-            ctx.lineWidth = 0
-            ctx.stroke()
+            ctx.drawImage(
+                spriteWithBG,
+                0,
+                70,
+                defaultSizeSprite,
+                defaultSizeSprite,
+                x * BLOCK_SIZE,
+                y * BLOCK_SIZE,
+                BLOCK_SIZE,
+                BLOCK_SIZE
+            )
 
             switch (FIELD[y][x]) {
                 case CONCRETE_WALL:
-                    ctx.beginPath();
-                    ctx.rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
-                    ctx.fillStyle = '#B0B0B0'
-                    ctx.fill()
-                    ctx.strokeStyle = '#B0B0B0'
-                    ctx.lineWidth = 0
-                    ctx.stroke()
-
-                    drawImage(48, 48, x, y)
+                    ctx.drawImage(
+                        spriteWithBG,
+                        48,
+                        48,
+                        defaultSizeSprite,
+                        defaultSizeSprite,
+                        x * BLOCK_SIZE,
+                        y * BLOCK_SIZE,
+                        BLOCK_SIZE,
+                        BLOCK_SIZE
+                    )
                     break
 
                 case BRICK_WALL:
-                    ctx.beginPath();
-                    ctx.rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
-                    ctx.fillStyle = '#B0B0B0'
-                    ctx.fill()
-                    ctx.strokeStyle = '#B0B0B0'
-                    ctx.lineWidth = 0
-                    ctx.stroke()
-
-                    drawImage(64, 48, x, y)
+                    ctx.drawImage(
+                        spriteWithBG,
+                        64,
+                        48,
+                        defaultSizeSprite,
+                        defaultSizeSprite,
+                        x * BLOCK_SIZE,
+                        y * BLOCK_SIZE,
+                        BLOCK_SIZE,
+                        BLOCK_SIZE
+                    )
                     break
             }
         }
@@ -522,31 +592,18 @@ function render() {
     setupSpawnBots()
     drawField()
 
+    player.plantBomb()
     player.movePlayer()
 
     BOTS.spawn.forEach(bot => bot.moveBot())
 
-    camera.translateX(person, 2)
+    camera.translateX(player, 2)
 
     clearArrays()
     requestAnimationFrame(render)
 }
 
 render()
-
-function drawImage(sx, sy, dx, dy) {
-   ctx.drawImage(
-       sprite,
-       sx,
-       sy,
-       defaultSizeSprite,
-       defaultSizeSprite,
-       dx * BLOCK_SIZE,
-       dy * BLOCK_SIZE,
-       BLOCK_SIZE,
-       BLOCK_SIZE
-   )
-}
 
 document.addEventListener('keydown', listenerKeyDown)
 document.addEventListener('keyup', listenerKeyUp)
@@ -558,26 +615,29 @@ function listenerKeyUp() {
 function listenerKeyDown(e) {
     e.preventDefault();
 
-    player.move = true
-    player.direction = e.code
+    player.move = e.code !== keyF
+    player.direction = e.code === keyF ? player.direction : e.code
 
     move(player, e.code)
 }
 
-function move(player, direction) {
+function move(person, direction) {
 
     switch(direction) {
         case arrowUp:
-            player.y -= player.upStep
+            person.y -= person.upStep
             break
         case arrowDown:
-            player.y += player.downStep
+            person.y += person.downStep
             break
         case arrowLeft:
-            player.x -= player.leftStep
+            person.x -= person.leftStep
             break
         case arrowRight:
-            player.x += player.rightStep
+            person.x += person.rightStep
+            break
+        case keyF :
+            person.activeBomb = true
             break
     }
 }
