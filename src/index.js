@@ -253,32 +253,112 @@ const bomb = {
     x: null,
     y: null,
     countBom: 0,
-    timeBom: 180,
+    timeBom: 1000,
+    view: 1,
     bombAnimation: animation([[0, 48], [16, 48], [31.5, 48]], 10),
+
+    horizontalAnimation: animation([[18, 96], [98, 96], [18, 176], [96, 176]], 100),
+
+    verticalAnimation: animation([[32, 82], [112, 82], [32, 161], [112, 161]], 10),
+    topEndAnimation: animation([[32, 68], [112, 67], [32, 144], [112, 144]], 10),
+    downEndAnimation: animation([[32, 124], [112, 125], [32, 208], [112, 208]], 10),
+    rightEndAnimation: animation([[61, 96], [141, 96], [64, 176], [144, 176]], 10),
+    leftEndAnimation: animation([[4, 96], [83, 96], [0, 176], [80, 176]], 100),
 
     detonationBom(player) {
         this.countBom++
 
         if (this.countBom >= this.timeBom) {
+            this.bang()
             this.countBom = 0
             player.activeBomb = false
         }
     },
 
-    drawBomb() {
-        const [ x, y ] = this.bombAnimation()
+    bang() {
+        const right = this.getEnv('right')
 
+        //console.log(right)
+    },
+
+    getEnv(direction) {
+        const env = []
+
+        for (let i = 1; i < this.view + 1; i++) {
+            switch (direction) {
+                case 'top':
+                    env.push({
+                        x: this.x,
+                        y: this.y - i,
+                        name: FIELD[this.y - i]?.[this.x],
+                    })
+                    break
+                case 'down':
+                    env.push({
+                        x: this.x,
+                        y: this.y + i,
+                        name: FIELD[this.y + i]?.[this.x],
+                    })
+                    break
+                case 'left':
+                    env.push({
+                        x: this.x - i,
+                        y: this.y,
+                        name: FIELD[this.y][this.x - i],
+                    })
+                    break
+                case 'right':
+                    env.push({
+                        x: this.x + i,
+                        y: this.y,
+                        name: FIELD[this.y][this.x + i],
+                    })
+                    break
+            }
+        }
+
+        return this.envProcessing(env)
+    },
+
+    envProcessing(env) {
+        return env.reduce((acc, zone, idx) => {
+            if(zone.name === CONCRETE_WALL) {
+                env.splice(idx, env.length)
+                return acc
+            }
+
+            acc.push(zone)
+            return acc
+        }, [])
+    },
+
+    drawBomb() {
+        const [ x, y ] = this.horizontalAnimation()
+
+        // ctx.drawImage(
+        //     spriteWithBG,
+        //     x,
+        //     y,
+        //     defaultSizeSprite,
+        //     defaultSizeSprite,
+        //     (this.x * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
+        //     (this.y * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
+        //     defaultSizeSprite + 5,
+        //     defaultSizeSprite + 5
+        // )
+        //
         ctx.drawImage(
             spriteWithBG,
             x,
             y,
             defaultSizeSprite,
             defaultSizeSprite,
-            (this.x * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
-            (this.y * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
-            defaultSizeSprite + 5,
-            defaultSizeSprite + 5
+            this.x * BLOCK_SIZE,
+            this.y * BLOCK_SIZE,
+            BLOCK_SIZE,
+            BLOCK_SIZE
         )
+
     }
 }
 
