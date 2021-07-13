@@ -146,7 +146,12 @@ const person = {
     },
 
     moveBot() {
-        collision(this, WALLS)
+        collision(this, [...WALLS,
+            player.activeBomb
+                ? [bomb.x * BLOCK_SIZE, bomb.y * BLOCK_SIZE]
+                : []
+            ]
+        )
 
         this.countLoop++
 
@@ -207,12 +212,7 @@ const player = { ...person, ...{
     defaultStep: 5,
     direction : arrowRight,
     move: false,
-
     activeBomb: false,
-    countBom: 0,
-    timeBom: 180,
-    bombX: 1,
-    bombY: 1,
 
     upAnimation: animation([[50, 16], [82, 16]], 10),
     downAnimation: animation([[50, 0], [82, 0]], 10),
@@ -222,8 +222,8 @@ const player = { ...person, ...{
 
     plantBomb() {
         if (this.activeBomb) {
-            this.detonationBom()
-            this.drawBomb()
+            bomb.detonationBom(this)
+            bomb.drawBomb()
             return
         }
 
@@ -240,39 +240,47 @@ const player = { ...person, ...{
                 playerX > minX && playerX < maxX &&
                 playerY > minY && playerY < maxY
             ) {
-
-                this.bombX = x
-                this.bombY = y
+                bomb.x = x
+                bomb.y = y
 
                 break
             }
         }
     },
+}}
 
-    detonationBom() {
+const bomb = {
+    x: null,
+    y: null,
+    countBom: 0,
+    timeBom: 180,
+    bombAnimation: animation([[0, 48], [16, 48], [31.5, 48]], 10),
+
+    detonationBom(player) {
         this.countBom++
 
         if (this.countBom >= this.timeBom) {
             this.countBom = 0
-            this.activeBomb = false
+            player.activeBomb = false
         }
     },
 
     drawBomb() {
         const [ x, y ] = this.bombAnimation()
+
         ctx.drawImage(
             spriteWithBG,
             x,
             y,
             defaultSizeSprite,
             defaultSizeSprite,
-            this.bombX * BLOCK_SIZE + 5,
-            this.bombY * BLOCK_SIZE + 5,
+            (this.x * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
+            (this.y * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
             defaultSizeSprite + 5,
             defaultSizeSprite + 5
         )
     }
-}}
+}
 
 const camera = {
     w: DPI_WIDTH,
@@ -440,18 +448,12 @@ function setupField() {
         }
     }
 
-    const { walls } = BRICK_WALLS
-
     // Спавн каменных стен
-    for (const [idx, [x, y, randNum]] of walls.entries()) {
+    for (const [idx, [x, y, randNum]] of BRICK_WALLS.walls.entries()) {
 
-        const prev3 = walls[idx - 3]?.[2]
-        const prev2 = walls[idx - 2]?.[2]
-        const prev1 = walls[idx - 1]?.[2]
-
-        if (randNum === 0) {
-            FREE_ZONE.push([x, y])
-        }
+        const prev3 = BRICK_WALLS.walls[idx - 3]?.[2]
+        const prev2 = BRICK_WALLS.walls[idx - 2]?.[2]
+        const prev1 = BRICK_WALLS.walls[idx - 1]?.[2]
 
         if (y === 1 && x === 1 ||
             y === 1 && x === 2 ||
@@ -467,6 +469,14 @@ function setupField() {
         if (randNum > 0) {
             FIELD[y][x] = BRICK_WALL
             //WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
+        }
+    }
+
+    for (let y = 0; y < FIELD.length; y++ ) {
+        for (let x = 0; x < FIELD[y].length; x++) {
+            if (FIELD[y][x] === EMPTY) {
+                FREE_ZONE.push([x, y])
+            }
         }
     }
 }
@@ -490,6 +500,12 @@ function setupSpawnBots() {
         groupFreeZone.splice(idx, 1)
     }
 
+    createBot()
+
+    POINT_SPAWN_BOTS.switch = false
+}
+
+function createBot() {
     POINT_SPAWN_BOTS.points.forEach( ([x, y]) =>  {
         const randBotIdx = randomNumber(Object.keys(BOTS.persons).length)
         const nameBot = Object.keys(BOTS.persons)[randBotIdx]
@@ -497,23 +513,21 @@ function setupSpawnBots() {
 
         BOTS.spawn.push(
             { ...person, ...{
-                x: x * BLOCK_SIZE,
-                y: y * BLOCK_SIZE,
-                height: defaultSizeSprite + 5,
-                width: defaultSizeSprite + 5,
-                countLoop: 0,
-                loop: BOTS.loops[randomNumber(BOTS.loops.length)],
-                direction : control[randomNumber(control.length)],
-                defaultStep: 0.5,
-                upAnimation: bot.up,
-                downAnimation: bot.down,
-                leftAnimation: bot.left,
-                rightAnimation: bot.right,
-            }}
-       )
+                    x: x * BLOCK_SIZE,
+                    y: y * BLOCK_SIZE,
+                    height: defaultSizeSprite + 5,
+                    width: defaultSizeSprite + 5,
+                    countLoop: 0,
+                    loop: BOTS.loops[randomNumber(BOTS.loops.length)],
+                    direction : control[randomNumber(control.length)],
+                    defaultStep: 0.5,
+                    upAnimation: bot.up,
+                    downAnimation: bot.down,
+                    leftAnimation: bot.left,
+                    rightAnimation: bot.right,
+                }}
+        )
     })
-
-    POINT_SPAWN_BOTS.switch = false
 }
 
 function drawField() {
