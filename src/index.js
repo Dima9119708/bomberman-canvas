@@ -227,6 +227,8 @@ const player = { ...person, ...{
             return
         }
 
+        if (bomb.shot) return
+
         const playerX = this.x + (this.width / 2)
         const playerY = this.y + (this.height / 2)
 
@@ -253,32 +255,89 @@ const bomb = {
     x: null,
     y: null,
     countBom: 0,
-    timeBom: 1000,
+    timeBom: 180,
+
+    shot: false,
+    countBang: 0,
+    timeBang: 50,
+
+    frameIndex : 0,
+    tickCount : 0,
+
     view: 1,
-    bombAnimation: animation([[0, 48], [16, 48], [31.5, 48]], 10),
 
-    horizontalAnimation: animation([[18, 96], [98, 96], [18, 176], [96, 176]], 100),
 
-    verticalAnimation: animation([[32, 82], [112, 82], [32, 161], [112, 161]], 10),
-    topEndAnimation: animation([[32, 68], [112, 67], [32, 144], [112, 144]], 10),
-    downEndAnimation: animation([[32, 124], [112, 125], [32, 208], [112, 208]], 10),
-    rightEndAnimation: animation([[61, 96], [141, 96], [64, 176], [144, 176]], 10),
-    leftEndAnimation: animation([[4, 96], [83, 96], [0, 176], [80, 176]], 100),
+    initAnimation() {
+        const speed = 100
+
+        this.bombAnimation = animation([[0, 48], [16, 48], [31.5, 48]], 10)
+
+        this.centerAnimation = animation([[32, 95], [112, 95], [32, 176], [112, 176]], speed, this)
+        this.horizontalRightAnimation = animation([[18, 96], [98, 96], [17, 176], [96, 176]], speed, this)
+        this.horizontalLeftAnimation = animation([[18, 96], [98, 96], [17, 176], [96, 176]], speed, this)
+        this.verticalTopAnimation = animation([[32, 82], [112, 82], [32, 161], [112, 161]], speed, this)
+        this.verticalDownAnimation = animation([[32, 82], [112, 82], [32, 161], [112, 161]], speed, this)
+        this.topEndAnimation = animation([[32, 68], [112, 67], [32, 144], [112, 144]], speed, this)
+        this.downEndAnimation = animation([[32, 124], [112, 125], [32, 208], [112, 208]], speed, this)
+        this.rightEndAnimation = animation([[61, 96], [141, 96], [64, 176], [144, 176]], speed, this)
+        this.leftEndAnimation = animation([[4, 96], [83, 96], [0, 176], [80, 176]], speed, this)
+    },
 
     detonationBom(player) {
         this.countBom++
 
         if (this.countBom >= this.timeBom) {
-            this.bang()
             this.countBom = 0
             player.activeBomb = false
+            this.shot = true
         }
     },
 
     bang() {
-        const right = this.getEnv('right')
+        if (!this.shot) return
 
-        //console.log(right)
+        this.countBang++
+
+        this.drawBang(this.getEnv('top'), this.verticalTopAnimation, this.topEndAnimation)
+        this.drawBang(this.getEnv('down'), this.verticalDownAnimation, this.downEndAnimation)
+        this.drawBang(this.getEnv('left'), this.horizontalLeftAnimation, this.leftEndAnimation)
+        this.drawBang(this.getEnv('right'), this.horizontalRightAnimation, this.rightEndAnimation)
+
+        if (this.countBang >= this.timeBang) {
+            this.countBang = 0
+            this.shot = false
+            this.clearAnimation()
+        }
+    },
+
+    clearAnimation() {
+        this.verticalTopAnimation(true)
+        this.topEndAnimation(true)
+        this.verticalDownAnimation(true)
+        this.downEndAnimation(true)
+        this.horizontalLeftAnimation(true)
+        this.leftEndAnimation(true)
+        this.horizontalRightAnimation(true)
+        this.rightEndAnimation(true)
+    },
+
+    drawBang(envArr, callbackStraight, callbackEnd) {
+        const end = envArr[envArr.length - 1]
+
+        for (const env of envArr) {
+            {
+                const [x, y] = this.centerAnimation()
+                this.drawImage(x, y, this.x, this.y)
+            }
+            {
+                const [x, y] = callbackStraight()
+                this.drawImage(x, y, env.x, env.y)
+            }
+            {
+                const [x, y] = callbackEnd()
+                this.drawImage(x, y, end.x, end.y)
+            }
+        }
     },
 
     getEnv(direction) {
@@ -320,6 +379,20 @@ const bomb = {
         return this.envProcessing(env)
     },
 
+    drawImage(sx, sy, dx, dy) {
+        ctx.drawImage(
+            spriteWithBG,
+            sx,
+            sy,
+            defaultSizeSprite,
+            defaultSizeSprite,
+            dx * BLOCK_SIZE,
+            dy * BLOCK_SIZE,
+            BLOCK_SIZE,
+            BLOCK_SIZE
+        )
+    },
+
     envProcessing(env) {
         return env.reduce((acc, zone, idx) => {
             if(zone.name === CONCRETE_WALL) {
@@ -333,34 +406,23 @@ const bomb = {
     },
 
     drawBomb() {
-        const [ x, y ] = this.horizontalAnimation()
+        const [ x, y ] = this.bombAnimation()
 
-        // ctx.drawImage(
-        //     spriteWithBG,
-        //     x,
-        //     y,
-        //     defaultSizeSprite,
-        //     defaultSizeSprite,
-        //     (this.x * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
-        //     (this.y * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
-        //     defaultSizeSprite + 5,
-        //     defaultSizeSprite + 5
-        // )
-        //
         ctx.drawImage(
             spriteWithBG,
             x,
             y,
             defaultSizeSprite,
             defaultSizeSprite,
-            this.x * BLOCK_SIZE,
-            this.y * BLOCK_SIZE,
-            BLOCK_SIZE,
-            BLOCK_SIZE
+            (this.x * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
+            (this.y * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
+            defaultSizeSprite + 5,
+            defaultSizeSprite + 5
         )
-
     }
 }
+
+bomb.initAnimation()
 
 const camera = {
     w: DPI_WIDTH,
@@ -658,23 +720,28 @@ function drawField() {
     }
 }
 
-function animation(frames, loop = 6) {
-    let frameIndex = 0
-    let tickCount = 0
+function animation(frames, loop = 6, obj = {}) {
+    obj.frameIndex = 0
+    obj.tickCount = 0
 
-    return () => {
-        tickCount++
+    return (clearAnimation = false) => {
+        obj.tickCount++
 
-        if (tickCount > loop) {
-            tickCount = 0;
-            if (frameIndex < frames.length - 1) {
-                frameIndex++;
+        if (clearAnimation) {
+            obj.tickCount = 0
+            obj.frameIndex = 0
+        }
+
+        if (obj.tickCount > loop) {
+            obj.tickCount = 0;
+            if (obj.frameIndex < frames.length - 1) {
+                obj.frameIndex++;
             } else {
-                frameIndex = 0;
+                obj.frameIndex = 0;
             }
         }
 
-        return frames[frameIndex]
+        return frames[obj.frameIndex]
     }
 }
 
@@ -686,6 +753,7 @@ function render() {
     setupSpawnBots()
     drawField()
 
+    bomb.bang()
     player.plantBomb()
     player.movePlayer()
 
