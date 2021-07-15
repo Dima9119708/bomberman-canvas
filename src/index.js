@@ -2,9 +2,21 @@ import './styles.scss'
 import bgWithout from './image/bomberman-without-bg.png'
 import bgWith from './image/bomberman-with-bg.png'
 
-const loadSprite = (spriteWithoutBG) => {
+import stageTheme from './music/stage-theme.mp3'
+import deadMusic from './music/just-died.mp3'
+import putBomb from './music/put-bomb.wav'
+import explosion from './music/explosion.mp3'
+
+const audio = {
+    stageTheme: new Audio(stageTheme),
+    dead: new Audio(deadMusic),
+    putBomb: new Audio(putBomb),
+    explosion: new Audio(explosion)
+}
+
+const loadSprite = (sprite) => {
     const image = new Image()
-    image.src = spriteWithoutBG
+    image.src = sprite
     return image
 }
 
@@ -22,6 +34,10 @@ const arrowUp = 'ArrowUp'
 const arrowDown = 'ArrowDown'
 const arrowLeft = 'ArrowLeft'
 const arrowRight = 'ArrowRight'
+const W = 'KeyW'
+const S = 'KeyS'
+const D = 'KeyD'
+const A = 'KeyA'
 const keyF = 'KeyF'
 
 const control = [arrowUp, arrowDown, arrowLeft, arrowRight]
@@ -47,7 +63,7 @@ const LENGTH_Y = BLOCKS_Y - 1
 
 const MAX_WIDTH = BLOCKS_X * BLOCK_SIZE
 
-const LENGTH_BOTS = 20
+const LENGTH_BOTS = 5
 const distanceBots = MAX_WIDTH / LENGTH_BOTS
 const DISTANCE_BOTS = []
 
@@ -140,6 +156,10 @@ const BOTS = {
 
     destroyGroup: [],
 
+    movement() {
+        this.spawn.forEach(bot => bot.movement())
+    },
+
     destroy(idx) {
         this.destroyGroup.push(...this.spawn.splice(idx, 1))
     },
@@ -195,8 +215,60 @@ const person = {
     downAnimation: null,
     leftAnimation: null,
     rightAnimation: null,
+}
 
-    movePlayer() {
+const player = { ...person, ...{
+    x: BLOCK_SIZE + 5,
+    y: BLOCK_SIZE + 5,
+    xDead: undefined,
+    yDead: undefined,
+    dead: false,
+    height: defaultSizeSprite + 5,
+    width: defaultSizeSprite,
+    defaultStep: 5,
+    direction : arrowRight,
+    move: false,
+    activeBomb: false,
+
+    countBomb: 1,
+    posBomb: [],
+
+    countDead: 0,
+    timeDead: 100,
+
+    upAnimation: animation([[50, 16], [82, 16]], 10),
+    downAnimation: animation([[50, 0], [82, 0]], 10),
+    leftAnimation: animation([[1, 0], [34, 0]], 10),
+    rightAnimation: animation([[3, 16], [34, 16]], 10),
+    destroyAnimation: animation([[2, 32], [18, 32], [34, 32], [50, 32], [66, 32], [82, 32], [98, 32]], 14),
+
+    plantBomb() {
+        bomb.detonationBom()
+
+        const playerX = this.x + (this.width / 2)
+        const playerY = this.y + (this.height / 2)
+
+        for (const [x, y] of FREE_ZONE) {
+            const minX = x * BLOCK_SIZE
+            const minY = y * BLOCK_SIZE
+            const maxX = x * BLOCK_SIZE + BLOCK_SIZE
+            const maxY = y * BLOCK_SIZE + BLOCK_SIZE
+
+            if (
+                playerX > minX && playerX < maxX &&
+                playerY > minY && playerY < maxY
+            ) {
+                bomb.x = x
+                bomb.y = y
+
+                break
+            }
+        }
+
+        return this
+    },
+
+    movement() {
         collision(this, [...WALLS, ...this.walls])
 
         if (!this.move) {
@@ -211,6 +283,18 @@ const person = {
                     ctx.drawImage(spriteWithoutBG, 17, 0, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 case arrowRight:
+                    ctx.drawImage(spriteWithoutBG, 20, 16, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                case W:
+                    ctx.drawImage(spriteWithoutBG, 66, 16, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                case S:
+                    ctx.drawImage(spriteWithoutBG, 66, 0, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                case A:
+                    ctx.drawImage(spriteWithoutBG, 17, 0, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                case D:
                     ctx.drawImage(spriteWithoutBG, 20, 16, defaultSizeSprite - 5, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
             }
@@ -237,118 +321,31 @@ const person = {
                     ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
                     break
                 }
+
+                case W: {
+                    const [x, y] = this.upAnimation()
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                }
+                case S: {
+                    const [x, y] = this.downAnimation()
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                }
+                case A: {
+                    const [x, y] = this.leftAnimation()
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                }
+                case D: {
+                    const [x, y] = this.rightAnimation()
+                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite - 4, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                    break
+                }
             }
         }
-    },
 
-    moveBot() {
-        collision(this, [
-            ...WALLS,
-            ...this.walls,
-            player.activeBomb ? [bomb.x * BLOCK_SIZE, bomb.y * BLOCK_SIZE] : []
-        ])
-
-        this.countLoop++
-
-        const way = {
-            [arrowUp]: this.upStep,
-            [arrowDown]: this.downStep,
-            [arrowLeft]: this.leftStep,
-            [arrowRight]: this.rightStep
-        }
-
-        if (this.countLoop > this.loop) {
-            this.countLoop = 0
-            this.loop = BOTS.loops[randomNumber(BOTS.loops.length)]
-            this.randomDirection(way)
-        }
-
-        if (way[this.direction] === 0) {
-            this.randomDirection(way)
-        }
-
-        move(this, this.direction)
-
-        switch (this.direction) {
-            case arrowUp: {
-                const [x, y] = this.upAnimation()
-                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                break
-            }
-            case arrowDown: {
-                const [x, y] = this.downAnimation()
-                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                break
-            }
-            case arrowLeft: {
-                const [x, y] = this.leftAnimation()
-                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                break
-            }
-            case arrowRight: {
-                const [x, y] = this.rightAnimation()
-                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                break
-            }
-        }
-    },
-
-    randomDirection(way) {
-        const idx = randomNumber(Object.keys(way).length)
-        this.direction = Object.keys(way)[idx]
-    }
-}
-
-const player = { ...person, ...{
-    x: BLOCK_SIZE + 5,
-    y: BLOCK_SIZE + 5,
-    xDead: undefined,
-    yDead: undefined,
-    dead: false,
-    height: defaultSizeSprite + 5,
-    width: defaultSizeSprite,
-    defaultStep: 5,
-    direction : arrowRight,
-    move: false,
-    activeBomb: false,
-
-    countDead:0,
-    timeDead: 100,
-
-    upAnimation: animation([[50, 16], [82, 16]], 10),
-    downAnimation: animation([[50, 0], [82, 0]], 10),
-    leftAnimation: animation([[1, 0], [34, 0]], 10),
-    rightAnimation: animation([[3, 16], [34, 16]], 10),
-    destroyAnimation: animation([[2, 32], [18, 32], [34, 32], [50, 32], [66, 32], [82, 32], [98, 32]], 14),
-
-    plantBomb() {
-        if (this.activeBomb) {
-            bomb.detonationBom(this)
-            bomb.drawBomb()
-            return
-        }
-
-        if (bomb.shot) return
-
-        const playerX = this.x + (this.width / 2)
-        const playerY = this.y + (this.height / 2)
-
-        for (const [x, y] of FREE_ZONE) {
-            const minX = x * BLOCK_SIZE
-            const minY = y * BLOCK_SIZE
-            const maxX = x * BLOCK_SIZE + BLOCK_SIZE
-            const maxY = y * BLOCK_SIZE + BLOCK_SIZE
-
-            if (
-                playerX > minX && playerX < maxX &&
-                playerY > minY && playerY < maxY
-            ) {
-                bomb.x = x
-                bomb.y = y
-
-                break
-            }
-        }
+        return this
     },
 
     destroy() {
@@ -360,9 +357,11 @@ const player = { ...person, ...{
     },
 
     drawDestroy() {
-        if (!this.xDead && this.yDead) return
+        if (!this.xDead && !this.yDead) return
 
         const [sx, sy] = this.destroyAnimation()
+
+        audio.dead.play()
 
         this.countDead++
 
@@ -384,6 +383,17 @@ const player = { ...person, ...{
             defaultSizeSprite,
             defaultSizeSprite + 5
         )
+    },
+
+    savePosBomb() {
+        if (this.posBomb.length < this.countBomb) {
+            audio.putBomb.play()
+
+            const x = bomb.x
+            const y = bomb.y
+
+            this.posBomb.push({ x, y, tick: 0, bangTick: 0})
+        }
     }
 }}
 
@@ -391,18 +401,13 @@ const bomb = {
     x: null,
     y: null,
 
-    shot: false,
-
-    tickBom: 0,
     timeBom: 180,
-
-    tickBang: 0,
     timeBang: 50,
 
     frameIndex : 0,
     tickCount : 0,
 
-    envBang: {},
+    env: {},
 
     view: 1,
 
@@ -422,80 +427,94 @@ const bomb = {
         this.leftEndAnimation = animation([[4, 96], [83, 96], [0, 176], [80, 176]], speed, this)
     },
 
-    detonationBom(player) {
-        this.tickBom++
+    detonationBom() {
 
-        if (this.tickBom >= this.timeBom) {
-            this.tickBom = 0
-            player.activeBomb = false
-            this.shot = true
+        for (const [idx, bomb] of player.posBomb.entries()) {
+            if (bomb.tick < this.timeBom) {
+                bomb.tick++
+                this.drawBomb(bomb.x, bomb.y)
+            }
+
+            if (bomb.tick >= this.timeBom) {
+                this.bang(bomb, idx)
+                audio.explosion.play()
+            }
         }
     },
 
-    bang() {
-        if (!this.shot) return
+    bang(bomb, idx) {
+        bomb.bangTick++
 
-        this.tickBang++
+        if (!this.env[idx]) {
+            this.env[idx] = {}
+        }
 
-        if (this.tickBang > this.timeBang) {
-            this.tickBang = 0
-            this.shot = false
-            this.envBang = {}
-            BANG.length = 0
+        if (bomb.bangTick > this.timeBang) {
+            if (player.posBomb.length - 1 === idx) {
+                this.env = {}
+                BANG.length = 0
+            } else {
+                this.env[idx] = {}
+            }
+
+            player.posBomb.splice(idx, 1)
             this.clearAnimation()
+
             return
         }
 
-        this.drawBang(this.getEnv('top'), this.verticalTopAnimation, this.topEndAnimation)
-        this.drawBang(this.getEnv('down'), this.verticalDownAnimation, this.downEndAnimation)
-        this.drawBang(this.getEnv('left'), this.horizontalLeftAnimation, this.leftEndAnimation)
-        this.drawBang(this.getEnv('right'), this.horizontalRightAnimation, this.rightEndAnimation)
+        this.drawBang(this.getEnv('top',  bomb, idx), this.verticalTopAnimation, this.topEndAnimation, bomb)
+        this.drawBang(this.getEnv('down', bomb, idx), this.verticalDownAnimation, this.downEndAnimation, bomb)
+        this.drawBang(this.getEnv('left', bomb, idx), this.horizontalLeftAnimation, this.leftEndAnimation, bomb)
+        this.drawBang(this.getEnv('right', bomb, idx), this.horizontalRightAnimation, this.rightEndAnimation, bomb)
     },
 
-    getEnv(direction) {
+    getEnv(direction, bomb, idx) {
         const env = []
+        const { x, y } = bomb
 
         for (let i = 1; i < this.view + 1; i++) {
+
             switch (direction) {
                 case 'top':
                     env.push({
-                        x: this.x,
-                        y: this.y - i,
-                        name: FIELD[this.y - i]?.[this.x],
+                        x: x,
+                        y: y - i,
+                        name: FIELD[y - i]?.[x],
                     })
                     break
                 case 'down':
                     env.push({
-                        x: this.x,
-                        y: this.y + i,
-                        name: FIELD[this.y + i]?.[this.x],
+                        x: x,
+                        y: y + i,
+                        name: FIELD[y + i]?.[x],
                     })
                     break
                 case 'left':
                     env.push({
-                        x: this.x - i,
-                        y: this.y,
-                        name: FIELD[this.y][this.x - i],
+                        x: x - i,
+                        y: y,
+                        name: FIELD[y][x - i],
                     })
                     break
                 case 'right':
                     env.push({
-                        x: this.x + i,
-                        y: this.y,
-                        name: FIELD[this.y][this.x + i],
+                        x: x + i,
+                        y: y,
+                        name: FIELD[y][x + i],
                     })
                     break
             }
         }
 
-        if(!this.envBang[direction]) {
-            this.envBang[direction] = this.envProcessing(env)
+        if(!this.env[idx]?.[direction]) {
+            this.env[idx][direction] = this.envProcessing(env, x, y)
         }
 
-        return this.envBang[direction]
+        return this.env[idx][direction]
     },
 
-    envProcessing(env) {
+    envProcessing(env, x, y) {
 
         return env.reduce((acc, zone, idx) => {
             if(zone.name === CONCRETE_WALL) {
@@ -503,7 +522,7 @@ const bomb = {
                 return acc
             }
 
-            BANG.push(zone, { x: this.x, y: this.y, zone: FREE_ZONE })
+            BANG.push(zone, { x, y, name: EMPTY })
 
             if(zone.name === BRICK_WALL) {
                 env.splice(idx, env.length)
@@ -515,13 +534,13 @@ const bomb = {
         }, [])
     },
 
-    drawBang(envArr, callbackStraight, callbackEnd) {
+    drawBang(envArr, callbackStraight, callbackEnd, bomb) {
         const end = envArr[envArr.length - 1]
 
         for (const env of envArr) {
             {
                 const [x, y] = this.centerAnimation()
-                this.drawImage(x, y, this.x, this.y)
+                this.drawImage(x, y, bomb.x, bomb.y)
             }
             {
                 const [x, y] = callbackStraight()
@@ -532,6 +551,22 @@ const bomb = {
                 this.drawImage(x, y, end.x, end.y)
             }
         }
+    },
+
+    drawBomb(dx, dy) {
+        const [ sx, sy ] = this.bombAnimation()
+
+        ctx.drawImage(
+            spriteWithBG,
+            sx,
+            sy,
+            defaultSizeSprite,
+            defaultSizeSprite,
+            (dx * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
+            (dy * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
+            defaultSizeSprite + 5,
+            defaultSizeSprite + 5
+        )
     },
 
     drawImage(sx, sy, dx, dy) {
@@ -545,22 +580,6 @@ const bomb = {
             dy * BLOCK_SIZE,
             BLOCK_SIZE,
             BLOCK_SIZE
-        )
-    },
-
-    drawBomb() {
-        const [ x, y ] = this.bombAnimation()
-
-        ctx.drawImage(
-            spriteWithBG,
-            x,
-            y,
-            defaultSizeSprite,
-            defaultSizeSprite,
-            (this.x * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
-            (this.y * BLOCK_SIZE + (BLOCK_SIZE / 2)) - ((defaultSizeSprite + 5) / 2),
-            defaultSizeSprite + 5,
-            defaultSizeSprite + 5
         )
     },
 
@@ -611,6 +630,11 @@ const camera = {
 
 function clearBefore() {
     ctx.clearRect(0, 0, MAX_WIDTH, DPI_HEIGHT)
+    player.walls.length = 0
+    BOTS.spawn.forEach(bot => bot.walls.length = 0)
+    WALLS.length = 0
+    FREE_ZONE.length = 0
+    DISTANCE_BOTS.length = 0
 }
 
 function destroy() {
@@ -686,15 +710,6 @@ function destroy() {
     BRICK_WALLS.drawDestroy()
     BOTS.drawDestroy()
     player.drawDestroy()
-}
-
-function clearAfter() {
-    player.walls.length = 0
-    BOTS.spawn.forEach(bot => bot.walls.length = 0)
-    WALLS.length = 0
-    FREE_ZONE.length = 0
-    DISTANCE_BOTS.length = 0
-    BRICK_WALLS.switch = false
 }
 
 function randomNumber(number) {
@@ -822,8 +837,11 @@ function setupField() {
         }
     }
 
+    BRICK_WALLS.switch = false
+
     // Спавн каменных стен
     for (const [idx, [x, y, randNum]] of BRICK_WALLS.walls.entries()) {
+        let zone = true
 
         const prev3 = BRICK_WALLS.walls[idx - 3]?.[2]
         const prev2 = BRICK_WALLS.walls[idx - 2]?.[2]
@@ -833,14 +851,14 @@ function setupField() {
             y === 1 && x === 2 ||
             y === 2 && x === 1
         ) {
-            continue
+            zone = false
         }
 
         if (prev1 > 0 && prev2 > 0 && prev3 > 0) {
-            continue
+            zone = false
         }
 
-        if (randNum > 0) {
+        if (randNum > 0 && zone) {
             FIELD[y][x] = BRICK_WALL
             player.walls.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
             BOTS.spawn.forEach(bot => {
@@ -909,7 +927,64 @@ function createBot() {
                     downAnimation: bot.down,
                     leftAnimation: bot.left,
                     rightAnimation: bot.right,
-                    destroyAnimation: bot.destroy
+                    destroyAnimation: bot.destroy,
+
+                    movement() {
+                        collision(this, [
+                            ...WALLS,
+                            ...this.walls,
+                            player.activeBomb ? [bomb.x * BLOCK_SIZE, bomb.y * BLOCK_SIZE] : []
+                        ])
+
+                        this.countLoop++
+
+                        const way = {
+                            [arrowUp]: this.upStep,
+                            [arrowDown]: this.downStep,
+                            [arrowLeft]: this.leftStep,
+                            [arrowRight]: this.rightStep
+                        }
+
+                        if (this.countLoop > this.loop) {
+                            this.countLoop = 0
+                            this.loop = BOTS.loops[randomNumber(BOTS.loops.length)]
+                            this.randomDirection(way)
+                        }
+
+                        if (way[this.direction] === 0) {
+                            this.randomDirection(way)
+                        }
+
+                        move(this, this.direction)
+
+                        switch (this.direction) {
+                            case arrowUp: {
+                                const [x, y] = this.upAnimation()
+                                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                break
+                            }
+                            case arrowDown: {
+                                const [x, y] = this.downAnimation()
+                                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                break
+                            }
+                            case arrowLeft: {
+                                const [x, y] = this.leftAnimation()
+                                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                break
+                            }
+                            case arrowRight: {
+                                const [x, y] = this.rightAnimation()
+                                ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                break
+                            }
+                        }
+                    },
+
+                    randomDirection(way) {
+                        const idx = randomNumber(Object.keys(way).length)
+                        this.direction = Object.keys(way)[idx]
+                    }
                 }}
         )
     })
@@ -996,18 +1071,15 @@ function render() {
     setupSpawnBots()
     drawField()
 
-    bomb.bang()
-
     player.plantBomb()
-    player.movePlayer()
+           .movement()
 
-    BOTS.spawn.forEach(bot => bot.moveBot())
-
-    destroy()
+    BOTS.movement()
 
     camera.translateX(player, 2)
 
-    clearAfter()
+    destroy()
+
     requestAnimationFrame(render)
 }
 
@@ -1023,14 +1095,15 @@ function listenerKeyUp() {
 function listenerKeyDown(e) {
     e.preventDefault();
 
-    player.move = e.code !== keyF
-    player.direction = e.code === keyF ? player.direction : e.code
+    if (control.includes(e.code)) {
+        player.move = e.code
+        player.direction = e.code
+    }
 
     move(player, e.code)
 }
 
 function move(person, direction) {
-
     switch(direction) {
         case arrowUp:
             person.y -= person.upStep
@@ -1044,8 +1117,20 @@ function move(person, direction) {
         case arrowRight:
             person.x += person.rightStep
             break
+        case W:
+            person.y -= person.upStep
+            break
+        case S:
+            person.y += person.downStep
+            break
+        case A:
+            person.x -= person.leftStep
+            break
+        case D:
+            person.x += person.rightStep
+            break
         case keyF :
-            person.activeBomb = true
+            person.savePosBomb()
             break
     }
 }
