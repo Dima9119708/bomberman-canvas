@@ -1,6 +1,6 @@
 import './styles.scss'
-import bgWithout from './bomberman-without-bg.png'
-import bgWith from './bomberman-with-bg.png'
+import bgWithout from './image/bomberman-without-bg.png'
+import bgWith from './image/bomberman-with-bg.png'
 
 const loadSprite = (spriteWithoutBG) => {
     const image = new Image()
@@ -24,7 +24,7 @@ const arrowLeft = 'ArrowLeft'
 const arrowRight = 'ArrowRight'
 const keyF = 'KeyF'
 
-const control = [arrowUp, arrowDown, arrowLeft, arrowRight, keyF]
+const control = [arrowUp, arrowDown, arrowLeft, arrowRight]
 
 const CONCRETE_WALL = 'CONCRETE_WALL' // не взрываються
 const BRICK_WALL = 'BRICK_WALL' // Взрывающие стены
@@ -115,18 +115,22 @@ const BOTS = {
     loops: [200, 400, 500, 700, 800, 1000],
     persons: {
         person1: {
+            defaultStep: 0.4,
+            wall: false,
             up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
             down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
             left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
             right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
-            destroyAnimation: animation([[96, 240], [112, 240], [128, 240], [144, 240], [160, 240]], 100 / 5)
+            destroy: animation([[96, 240], [112, 240], [128, 240], [144, 240], [160, 240]], 100 / 5)
         },
         person2: {
+            defaultStep: 0.4,
+            wall: false,
             up: animation([[48, 256], [64, 256], [80, 256]], 20),
             down: animation([[0, 256], [16, 256], [32, 256]], 20),
             left: animation([[48, 256], [64, 256], [80, 256]], 20),
             right: animation([[0, 256], [16, 256], [32, 256]], 20),
-            destroyAnimation: animation([[96, 256], [112, 288], [128, 288], [144, 288], [160, 288]], 100 / 5)
+            destroy: animation([[96, 256], [112, 288], [128, 288], [144, 288], [160, 288]], 100 / 5)
         },
     },
     spawn: [],
@@ -135,6 +139,11 @@ const BOTS = {
     time: 100,
 
     destroyGroup: [],
+
+    destroy(idx) {
+        this.destroyGroup.push(...this.spawn.splice(idx, 1))
+    },
+
     drawDestroy() {
         if (!this.destroyGroup.length) return
 
@@ -180,13 +189,15 @@ const person = {
 
     direction : arrowRight,
 
+    walls: [],
+
     upAnimation: null,
     downAnimation: null,
     leftAnimation: null,
     rightAnimation: null,
 
     movePlayer() {
-        collision(this, WALLS)
+        collision(this, [...WALLS, ...this.walls])
 
         if (!this.move) {
             switch (this.direction) {
@@ -231,12 +242,11 @@ const person = {
     },
 
     moveBot() {
-        collision(this, [...WALLS,
-            player.activeBomb
-                ? [bomb.x * BLOCK_SIZE, bomb.y * BLOCK_SIZE]
-                : []
-            ]
-        )
+        collision(this, [
+            ...WALLS,
+            ...this.walls,
+            player.activeBomb ? [bomb.x * BLOCK_SIZE, bomb.y * BLOCK_SIZE] : []
+        ])
 
         this.countLoop++
 
@@ -292,6 +302,9 @@ const person = {
 const player = { ...person, ...{
     x: BLOCK_SIZE + 5,
     y: BLOCK_SIZE + 5,
+    xDead: undefined,
+    yDead: undefined,
+    dead: false,
     height: defaultSizeSprite + 5,
     width: defaultSizeSprite,
     defaultStep: 5,
@@ -299,11 +312,14 @@ const player = { ...person, ...{
     move: false,
     activeBomb: false,
 
+    countDead:0,
+    timeDead: 100,
+
     upAnimation: animation([[50, 16], [82, 16]], 10),
     downAnimation: animation([[50, 0], [82, 0]], 10),
     leftAnimation: animation([[1, 0], [34, 0]], 10),
     rightAnimation: animation([[3, 16], [34, 16]], 10),
-    bombAnimation: animation([[0, 48], [16, 48], [31.5, 48]], 10),
+    destroyAnimation: animation([[2, 32], [18, 32], [34, 32], [50, 32], [66, 32], [82, 32], [98, 32]], 14),
 
     plantBomb() {
         if (this.activeBomb) {
@@ -334,6 +350,41 @@ const player = { ...person, ...{
             }
         }
     },
+
+    destroy() {
+        this.xDead = this.x
+        this.yDead = this.y
+
+        this.x = undefined
+        this.x = undefined
+    },
+
+    drawDestroy() {
+        if (!this.xDead && this.yDead) return
+
+        const [sx, sy] = this.destroyAnimation()
+
+        this.countDead++
+
+        if (this.countDead > this.timeDead) {
+            this.countDead = 0
+            this.xDead = undefined
+            this.yDead = undefined
+            return
+        }
+
+        ctx.drawImage(
+            spriteWithoutBG,
+            sx,
+            sy,
+            defaultSizeSprite - 4,
+            defaultSizeSprite,
+            this.xDead,
+            this.yDead,
+            defaultSizeSprite,
+            defaultSizeSprite + 5
+        )
+    }
 }}
 
 const bomb = {
@@ -353,7 +404,7 @@ const bomb = {
 
     envBang: {},
 
-    view: 2,
+    view: 1,
 
     initAnimation() {
         const speed = 100
@@ -558,11 +609,17 @@ const camera = {
     }
 }
 
-function clear() {
-    ctx.clearRect(0, 0, DPI_WIDTH, DPI_HEIGHT)
+function clearBefore() {
+    ctx.clearRect(0, 0, MAX_WIDTH, DPI_HEIGHT)
 }
 
 function destroy() {
+
+    const playerMinX = player.x
+    const playerMinY = player.y
+
+    const playerMaxX = player.x + player.width
+    const playerMaxY = player.y + player.height
 
     for (const bang of BANG) {
         const minX = bang.x * BLOCK_SIZE
@@ -575,23 +632,65 @@ function destroy() {
             BRICK_WALLS.destroy(bang.x, bang.y)
         }
 
+        if (playerMinX >= minX && playerMinX <= maxX &&
+            playerMinY >= minY && playerMinY <= maxY
+            ||
+            playerMaxX >= minX && playerMaxX <= maxX &&
+            playerMaxY >= minY && playerMaxY <= maxY
+        ) {
+            player.destroy()
+        }
+
         for (const [i, bot] of BOTS.spawn.entries()) {
+
+            const botMinX = bot.x + 2
+            const botMinY = bot.y + 2
+
+            const botManX = bot.x + bot.width - 2
+            const botManY = bot.y + bot.height - 2
+
             const centerX = bot.x + (bot.width / 2)
             const centerY = bot.y + (bot.height / 2)
 
             if (centerX >= minX && centerX <= maxX &&
                 centerY >= minY && centerY <= maxY
+                ||
+                botMinX >= minX && botMinX <= maxX &&
+                botMinY >= minY && botMinY <= maxY
+                ||
+                botManX >= minX && botManX <= maxX &&
+                botManY >= minY && botManY <= maxY
             ) {
-                BOTS.destroyGroup.push(...BOTS.spawn.splice(i, 1))
+                BOTS.destroy(i)
             }
+        }
+    }
+
+    for (const bot of BOTS.spawn) {
+        const botMinX = bot.x
+        const botMinY = bot.y
+
+        const botManX = bot.x + bot.width
+        const botManY = bot.y + bot.height
+
+        if (playerMinX >= botMinX && playerMinX <= botManX &&
+            playerMinY >= botMinY && playerMinY <= botManY
+            ||
+            playerMaxX >= botMinX && playerMaxX <= botManX &&
+            playerMaxY >= botMinY && playerMaxY <= botManY
+        ) {
+            player.destroy()
         }
     }
 
     BRICK_WALLS.drawDestroy()
     BOTS.drawDestroy()
+    player.drawDestroy()
 }
 
-function clearArrays() {
+function clearAfter() {
+    player.walls.length = 0
+    BOTS.spawn.forEach(bot => bot.walls.length = 0)
     WALLS.length = 0
     FREE_ZONE.length = 0
     DISTANCE_BOTS.length = 0
@@ -743,7 +842,12 @@ function setupField() {
 
         if (randNum > 0) {
             FIELD[y][x] = BRICK_WALL
-            //WALLS.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
+            player.walls.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
+            BOTS.spawn.forEach(bot => {
+                if (!bot.wall) {
+                    bot.walls.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
+                }
+            })
         }
     }
 
@@ -796,14 +900,16 @@ function createBot() {
                     height: defaultSizeSprite + 5,
                     width: defaultSizeSprite + 5,
                     countLoop: 0,
+                    wall: bot.wall,
+                    walls: [],
                     loop: BOTS.loops[randomNumber(BOTS.loops.length)],
                     direction : control[randomNumber(control.length)],
-                    defaultStep: 0.1,
+                    defaultStep: bot.defaultStep,
                     upAnimation: bot.up,
                     downAnimation: bot.down,
                     leftAnimation: bot.left,
                     rightAnimation: bot.right,
-                    destroyAnimation: bot.destroyAnimation
+                    destroyAnimation: bot.destroy
                 }}
         )
     })
@@ -883,7 +989,7 @@ function animation(frames, loop = 6, obj = {}) {
 }
 
 function render() {
-    clear()
+    clearBefore()
 
     setupDistanceBetweenBots()
     setupField()
@@ -901,7 +1007,7 @@ function render() {
 
     camera.translateX(player, 2)
 
-    clearArrays()
+    clearAfter()
     requestAnimationFrame(render)
 }
 
