@@ -35,7 +35,6 @@ const WALLS = []
 const FREE_ZONE = []
 const GROUP_FREE_ZONE = []
 const POINT_SPAWN_BOTS = { switch: true, points: [] }
-const BRICK_WALLS = { switch: true, walls: [] }
 
 const RANDOM_NUMBER = 1.6
 
@@ -48,28 +47,11 @@ const LENGTH_Y = BLOCKS_Y - 1
 
 const MAX_WIDTH = BLOCKS_X * BLOCK_SIZE
 
-const LENGTH_BOTS = 8
+const LENGTH_BOTS = 20
 const distanceBots = MAX_WIDTH / LENGTH_BOTS
 const DISTANCE_BOTS = []
 
-const BOTS = {
-    loops: [200, 500, 800, 1000],
-    persons: {
-        person1: {
-            up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
-            down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
-            left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
-            right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
-        },
-        person2: {
-            up: animation([[48, 256], [64, 256], [80, 256]], 20),
-            down: animation([[0, 256], [16, 256], [32, 256]], 20),
-            left: animation([[48, 256], [64, 256], [80, 256]], 20),
-            right: animation([[0, 256], [16, 256], [32, 256]], 20),
-        },
-    },
-    spawn: []
-}
+const BANG = []
 
 const canvas = document.querySelector('[data-el="main"]');
 const ctx = canvas.getContext('2d')
@@ -79,6 +61,109 @@ canvas.style.height = HEIGHT + 'px'
 
 canvas.width = DPI_WIDTH
 canvas.height = DPI_HEIGHT
+
+const BRICK_WALLS = {
+    switch: true,
+    walls: [],
+
+    tick: 0,
+    time: 80,
+
+    destroyGroup: [],
+    destroyAnimation: animation([[80, 48], [96, 48], [112, 48], [128, 48], [144, 48], [160, 48]], 80 / 6),
+
+    destroy(x, y) {
+        for (const [i, [wallX, wallY]] of this.walls.entries()) {
+            if (wallX === x && wallY === y) {
+                this.destroyGroup.push([x, y])
+                this.walls.splice(i, 1)
+            }
+        }
+    },
+
+    drawDestroy() {
+        if (!this.destroyGroup.length) return
+
+        this.tick++
+
+        if (this.tick > this.time) {
+            this.tick = 0
+            this.destroyGroup.length = 0
+            this.destroyAnimation(true)
+            return
+        }
+
+        const [sx, sy] = this.destroyAnimation()
+
+        for (const [dx, dy] of this.destroyGroup) {
+            ctx.drawImage(
+                spriteWithoutBG,
+                sx,
+                sy,
+                defaultSizeSprite,
+                defaultSizeSprite,
+                dx * BLOCK_SIZE,
+                dy * BLOCK_SIZE,
+                BLOCK_SIZE,
+                BLOCK_SIZE
+            )
+        }
+    }
+}
+
+const BOTS = {
+    loops: [200, 400, 500, 700, 800, 1000],
+    persons: {
+        person1: {
+            up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
+            down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
+            left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
+            right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
+            destroyAnimation: animation([[96, 240], [112, 240], [128, 240], [144, 240], [160, 240]], 100 / 5)
+        },
+        person2: {
+            up: animation([[48, 256], [64, 256], [80, 256]], 20),
+            down: animation([[0, 256], [16, 256], [32, 256]], 20),
+            left: animation([[48, 256], [64, 256], [80, 256]], 20),
+            right: animation([[0, 256], [16, 256], [32, 256]], 20),
+            destroyAnimation: animation([[96, 256], [112, 288], [128, 288], [144, 288], [160, 288]], 100 / 5)
+        },
+    },
+    spawn: [],
+
+    tick: 0,
+    time: 100,
+
+    destroyGroup: [],
+    drawDestroy() {
+        if (!this.destroyGroup.length) return
+
+        this.tick++
+
+        for (const bot of this.destroyGroup) {
+            const [sx, sy] = bot.destroyAnimation()
+
+            if (this.tick > this.time) {
+                this.tick = 0
+                this.destroyGroup.length = 0
+                bot.destroyAnimation(true)
+                return
+            }
+
+            ctx.drawImage(
+                spriteWithoutBG,
+                sx,
+                sy,
+                defaultSizeSprite,
+                defaultSizeSprite,
+                bot.x,
+                bot.y,
+                defaultSizeSprite + 5,
+                defaultSizeSprite + 5
+            )
+        }
+    }
+}
 
 const person = {
     x: BLOCK_SIZE + 2,
@@ -254,18 +339,21 @@ const player = { ...person, ...{
 const bomb = {
     x: null,
     y: null,
-    countBom: 0,
-    timeBom: 180,
 
     shot: false,
-    countBang: 0,
+
+    tickBom: 0,
+    timeBom: 180,
+
+    tickBang: 0,
     timeBang: 50,
 
     frameIndex : 0,
     tickCount : 0,
 
-    view: 1,
+    envBang: {},
 
+    view: 2,
 
     initAnimation() {
         const speed = 100
@@ -284,10 +372,10 @@ const bomb = {
     },
 
     detonationBom(player) {
-        this.countBom++
+        this.tickBom++
 
-        if (this.countBom >= this.timeBom) {
-            this.countBom = 0
+        if (this.tickBom >= this.timeBom) {
+            this.tickBom = 0
             player.activeBomb = false
             this.shot = true
         }
@@ -296,48 +384,21 @@ const bomb = {
     bang() {
         if (!this.shot) return
 
-        this.countBang++
+        this.tickBang++
+
+        if (this.tickBang > this.timeBang) {
+            this.tickBang = 0
+            this.shot = false
+            this.envBang = {}
+            BANG.length = 0
+            this.clearAnimation()
+            return
+        }
 
         this.drawBang(this.getEnv('top'), this.verticalTopAnimation, this.topEndAnimation)
         this.drawBang(this.getEnv('down'), this.verticalDownAnimation, this.downEndAnimation)
         this.drawBang(this.getEnv('left'), this.horizontalLeftAnimation, this.leftEndAnimation)
         this.drawBang(this.getEnv('right'), this.horizontalRightAnimation, this.rightEndAnimation)
-
-        if (this.countBang >= this.timeBang) {
-            this.countBang = 0
-            this.shot = false
-            this.clearAnimation()
-        }
-    },
-
-    clearAnimation() {
-        this.verticalTopAnimation(true)
-        this.topEndAnimation(true)
-        this.verticalDownAnimation(true)
-        this.downEndAnimation(true)
-        this.horizontalLeftAnimation(true)
-        this.leftEndAnimation(true)
-        this.horizontalRightAnimation(true)
-        this.rightEndAnimation(true)
-    },
-
-    drawBang(envArr, callbackStraight, callbackEnd) {
-        const end = envArr[envArr.length - 1]
-
-        for (const env of envArr) {
-            {
-                const [x, y] = this.centerAnimation()
-                this.drawImage(x, y, this.x, this.y)
-            }
-            {
-                const [x, y] = callbackStraight()
-                this.drawImage(x, y, env.x, env.y)
-            }
-            {
-                const [x, y] = callbackEnd()
-                this.drawImage(x, y, end.x, end.y)
-            }
-        }
     },
 
     getEnv(direction) {
@@ -376,7 +437,50 @@ const bomb = {
             }
         }
 
-        return this.envProcessing(env)
+        if(!this.envBang[direction]) {
+            this.envBang[direction] = this.envProcessing(env)
+        }
+
+        return this.envBang[direction]
+    },
+
+    envProcessing(env) {
+
+        return env.reduce((acc, zone, idx) => {
+            if(zone.name === CONCRETE_WALL) {
+                env.splice(idx, env.length)
+                return acc
+            }
+
+            BANG.push(zone, { x: this.x, y: this.y, zone: FREE_ZONE })
+
+            if(zone.name === BRICK_WALL) {
+                env.splice(idx, env.length)
+                return acc
+            }
+
+            acc.push(zone)
+            return acc
+        }, [])
+    },
+
+    drawBang(envArr, callbackStraight, callbackEnd) {
+        const end = envArr[envArr.length - 1]
+
+        for (const env of envArr) {
+            {
+                const [x, y] = this.centerAnimation()
+                this.drawImage(x, y, this.x, this.y)
+            }
+            {
+                const [x, y] = callbackStraight()
+                this.drawImage(x, y, env.x, env.y)
+            }
+            {
+                const [x, y] = callbackEnd()
+                this.drawImage(x, y, end.x, end.y)
+            }
+        }
     },
 
     drawImage(sx, sy, dx, dy) {
@@ -393,18 +497,6 @@ const bomb = {
         )
     },
 
-    envProcessing(env) {
-        return env.reduce((acc, zone, idx) => {
-            if(zone.name === CONCRETE_WALL) {
-                env.splice(idx, env.length)
-                return acc
-            }
-
-            acc.push(zone)
-            return acc
-        }, [])
-    },
-
     drawBomb() {
         const [ x, y ] = this.bombAnimation()
 
@@ -419,7 +511,19 @@ const bomb = {
             defaultSizeSprite + 5,
             defaultSizeSprite + 5
         )
-    }
+    },
+
+    clearAnimation() {
+        this.centerAnimation(true)
+        this.verticalTopAnimation(true)
+        this.topEndAnimation(true)
+        this.verticalDownAnimation(true)
+        this.downEndAnimation(true)
+        this.horizontalLeftAnimation(true)
+        this.leftEndAnimation(true)
+        this.horizontalRightAnimation(true)
+        this.rightEndAnimation(true)
+    },
 }
 
 bomb.initAnimation()
@@ -456,6 +560,35 @@ const camera = {
 
 function clear() {
     ctx.clearRect(0, 0, DPI_WIDTH, DPI_HEIGHT)
+}
+
+function destroy() {
+
+    for (const bang of BANG) {
+        const minX = bang.x * BLOCK_SIZE
+        const minY = bang.y * BLOCK_SIZE
+
+        const maxX = bang.x * BLOCK_SIZE + BLOCK_SIZE
+        const maxY = bang.y * BLOCK_SIZE + BLOCK_SIZE
+
+        if (bang.name === BRICK_WALL) {
+            BRICK_WALLS.destroy(bang.x, bang.y)
+        }
+
+        for (const [i, bot] of BOTS.spawn.entries()) {
+            const centerX = bot.x + (bot.width / 2)
+            const centerY = bot.y + (bot.height / 2)
+
+            if (centerX >= minX && centerX <= maxX &&
+                centerY >= minY && centerY <= maxY
+            ) {
+                BOTS.destroyGroup.push(...BOTS.spawn.splice(i, 1))
+            }
+        }
+    }
+
+    BRICK_WALLS.drawDestroy()
+    BOTS.drawDestroy()
 }
 
 function clearArrays() {
@@ -638,7 +771,10 @@ function setupSpawnBots() {
 
     for (const groupFreeZone of GROUP_FREE_ZONE) {
         const idx = randomNumber(groupFreeZone.length)
-        POINT_SPAWN_BOTS.points.push(groupFreeZone[idx] || [])
+
+        if (!groupFreeZone[idx]) break
+
+        POINT_SPAWN_BOTS.points.push(groupFreeZone[idx])
         groupFreeZone.splice(idx, 1)
     }
 
@@ -662,11 +798,12 @@ function createBot() {
                     countLoop: 0,
                     loop: BOTS.loops[randomNumber(BOTS.loops.length)],
                     direction : control[randomNumber(control.length)],
-                    defaultStep: 0.5,
+                    defaultStep: 0.1,
                     upAnimation: bot.up,
                     downAnimation: bot.down,
                     leftAnimation: bot.left,
                     rightAnimation: bot.right,
+                    destroyAnimation: bot.destroyAnimation
                 }}
         )
     })
@@ -754,10 +891,13 @@ function render() {
     drawField()
 
     bomb.bang()
+
     player.plantBomb()
     player.movePlayer()
 
     BOTS.spawn.forEach(bot => bot.moveBot())
+
+    destroy()
 
     camera.translateX(player, 2)
 
