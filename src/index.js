@@ -14,6 +14,10 @@ const audio = {
     explosion: new Audio(explosion)
 }
 
+document.addEventListener('mousemove', () => {
+    audio.stageTheme.play()
+})
+
 const loadSprite = (sprite) => {
     const image = new Image()
     image.src = sprite
@@ -63,7 +67,7 @@ const LENGTH_Y = BLOCKS_Y - 1
 
 const MAX_WIDTH = BLOCKS_X * BLOCK_SIZE
 
-const LENGTH_BOTS = 5
+const LENGTH_BOTS = 8
 const distanceBots = MAX_WIDTH / LENGTH_BOTS
 const DISTANCE_BOTS = []
 
@@ -127,32 +131,77 @@ const BRICK_WALLS = {
     }
 }
 
+const SCORE = {
+    timeScore: 100,
+    destroyGroup: [],
+
+    score100: [116, 339],
+    score200: [116, 337],
+    score400: [116, 355],
+    score800: [116, 383],
+
+    drawScore() {
+        for (const [idx, bot] of this.destroyGroup.entries()) {
+            bot.tickScore++
+
+            if (bot.tickScore >= this.timeScore) {
+                this.destroyGroup.splice(idx, 1)
+            }
+
+            const [sx, sy] = this[`score${bot.score}`]
+
+            ctx.drawImage(
+                spriteWithoutBG,
+                sx,
+                sy,
+                12,
+                5,
+                bot.x,
+                bot.y,
+                18,
+                11,
+            )
+        }
+    }
+}
+
 const BOTS = {
     loops: [200, 400, 500, 700, 800, 1000],
     persons: {
         person1: {
             defaultStep: 0.4,
             wall: false,
-            up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
-            down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
-            left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
-            right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
-            destroy: animation([[96, 240], [112, 240], [128, 240], [144, 240], [160, 240]], 100 / 5)
+            score: 100,
+            animate() {
+                return {
+                    up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
+                    down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
+                    left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
+                    right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
+                    destroy: animation([[96, 240], [112, 240], [128, 240], [144, 240], [160, 240]], 200 / 5)
+                }
+            }
         },
         person2: {
             defaultStep: 0.4,
             wall: false,
-            up: animation([[48, 256], [64, 256], [80, 256]], 20),
-            down: animation([[0, 256], [16, 256], [32, 256]], 20),
-            left: animation([[48, 256], [64, 256], [80, 256]], 20),
-            right: animation([[0, 256], [16, 256], [32, 256]], 20),
-            destroy: animation([[96, 256], [112, 288], [128, 288], [144, 288], [160, 288]], 100 / 5)
+            score: 200,
+            animate() {
+                return {
+                    up: animation([[48, 256], [64, 256], [80, 256]], 20),
+                    down: animation([[0, 256], [16, 256], [32, 256]], 20),
+                    left: animation([[48, 256], [64, 256], [80, 256]], 20),
+                    right: animation([[0, 256], [16, 256], [32, 256]], 20),
+                    destroy: animation([[96, 256], [112, 288], [128, 288], [144, 288], [160, 288]], 200 / 5)
+                }
+            }
         },
     },
+
     spawn: [],
 
     tick: 0,
-    time: 100,
+    time: 200,
 
     destroyGroup: [],
 
@@ -174,6 +223,7 @@ const BOTS = {
 
             if (this.tick > this.time) {
                 this.tick = 0
+                SCORE.destroyGroup.push(bot)
                 this.destroyGroup.length = 0
                 bot.destroyAnimation(true)
                 return
@@ -230,7 +280,7 @@ const player = { ...person, ...{
     move: false,
     activeBomb: false,
 
-    countBomb: 1,
+    countBomb: 2,
     posBomb: [],
 
     countDead: 0,
@@ -392,7 +442,14 @@ const player = { ...person, ...{
             const x = bomb.x
             const y = bomb.y
 
-            this.posBomb.push({ x, y, tick: 0, bangTick: 0})
+            this.posBomb.push(
+                { x,
+                  y,
+                  detonationTick: 0,
+                  bangTick: 0,
+                  pointsDestruction: [],
+                  bombAnimation: animation([[0, 48], [16, 48], [31.5, 48]], 10)
+                })
         }
     }
 }}
@@ -414,8 +471,6 @@ const bomb = {
     initAnimation() {
         const speed = 100
 
-        this.bombAnimation = animation([[0, 48], [16, 48], [31.5, 48]], 10)
-
         this.centerAnimation = animation([[32, 95], [112, 95], [32, 176], [112, 176]], speed, this)
         this.horizontalRightAnimation = animation([[18, 96], [98, 96], [17, 176], [96, 176]], speed, this)
         this.horizontalLeftAnimation = animation([[18, 96], [98, 96], [17, 176], [96, 176]], speed, this)
@@ -428,14 +483,15 @@ const bomb = {
     },
 
     detonationBom() {
+        for (const bomb of player.posBomb) {
+            if (bomb.detonationTick <= this.timeBom) {
+                bomb.detonationTick++
+                this.drawBomb(bomb)
+            }
+        }
 
         for (const [idx, bomb] of player.posBomb.entries()) {
-            if (bomb.tick < this.timeBom) {
-                bomb.tick++
-                this.drawBomb(bomb.x, bomb.y)
-            }
-
-            if (bomb.tick >= this.timeBom) {
+            if (bomb.detonationTick >= this.timeBom) {
                 this.bang(bomb, idx)
                 audio.explosion.play()
             }
@@ -450,17 +506,19 @@ const bomb = {
         }
 
         if (bomb.bangTick > this.timeBang) {
-            if (player.posBomb.length - 1 === idx) {
-                this.env = {}
-                BANG.length = 0
-            } else {
-                this.env[idx] = {}
-            }
+            bomb.pointsDestruction.forEach(coords => {
+                for (const [idx, bang] of BANG.entries()) {
+                    if (coords === bang) {
+                        BANG.splice(idx, 1)
+                    }
+                }
+            })
 
+            this.env[idx] = {}
             player.posBomb.splice(idx, 1)
             this.clearAnimation()
 
-            return
+            return null
         }
 
         this.drawBang(this.getEnv('top',  bomb, idx), this.verticalTopAnimation, this.topEndAnimation, bomb)
@@ -508,13 +566,14 @@ const bomb = {
         }
 
         if(!this.env[idx]?.[direction]) {
-            this.env[idx][direction] = this.envProcessing(env, x, y)
+            this.env[idx][direction] = this.envProcessing(env, bomb)
         }
 
         return this.env[idx][direction]
     },
 
-    envProcessing(env, x, y) {
+    envProcessing(env, bomb) {
+        const { x, y } = bomb
 
         return env.reduce((acc, zone, idx) => {
             if(zone.name === CONCRETE_WALL) {
@@ -522,7 +581,10 @@ const bomb = {
                 return acc
             }
 
-            BANG.push(zone, { x, y, name: EMPTY })
+            const center = { x, y, name: EMPTY }
+
+            BANG.push(zone, center)
+            bomb.pointsDestruction.push(zone, center)
 
             if(zone.name === BRICK_WALL) {
                 env.splice(idx, env.length)
@@ -553,8 +615,9 @@ const bomb = {
         }
     },
 
-    drawBomb(dx, dy) {
-        const [ sx, sy ] = this.bombAnimation()
+    drawBomb(bomb) {
+        const { x: dx, y : dy, bombAnimation } = bomb
+        const [ sx, sy ] = bombAnimation()
 
         ctx.drawImage(
             spriteWithBG,
@@ -841,8 +904,6 @@ function setupField() {
 
     // Спавн каменных стен
     for (const [idx, [x, y, randNum]] of BRICK_WALLS.walls.entries()) {
-        let zone = true
-
         const prev3 = BRICK_WALLS.walls[idx - 3]?.[2]
         const prev2 = BRICK_WALLS.walls[idx - 2]?.[2]
         const prev1 = BRICK_WALLS.walls[idx - 1]?.[2]
@@ -851,14 +912,14 @@ function setupField() {
             y === 1 && x === 2 ||
             y === 2 && x === 1
         ) {
-            zone = false
+            continue
         }
 
         if (prev1 > 0 && prev2 > 0 && prev3 > 0) {
-            zone = false
+            continue
         }
 
-        if (randNum > 0 && zone) {
+        if (randNum > 0) {
             FIELD[y][x] = BRICK_WALL
             player.walls.push([x * BLOCK_SIZE, y * BLOCK_SIZE])
             BOTS.spawn.forEach(bot => {
@@ -910,6 +971,7 @@ function createBot() {
         const randBotIdx = randomNumber(Object.keys(BOTS.persons).length)
         const nameBot = Object.keys(BOTS.persons)[randBotIdx]
         const bot = BOTS.persons[nameBot]
+        Object.assign(bot, bot.animate())
 
         BOTS.spawn.push(
             { ...person, ...{
@@ -920,6 +982,8 @@ function createBot() {
                     countLoop: 0,
                     wall: bot.wall,
                     walls: [],
+                    tickScore: 0,
+                    score: bot.score,
                     loop: BOTS.loops[randomNumber(BOTS.loops.length)],
                     direction : control[randomNumber(control.length)],
                     defaultStep: bot.defaultStep,
@@ -1080,6 +1144,8 @@ function render() {
 
     destroy()
 
+    SCORE.drawScore()
+
     requestAnimationFrame(render)
 }
 
@@ -1095,7 +1161,7 @@ function listenerKeyUp() {
 function listenerKeyDown(e) {
     e.preventDefault();
 
-    if (control.includes(e.code)) {
+    if ([...control, W,S,A,D].includes(e.code)) {
         player.move = e.code
         player.direction = e.code
     }
