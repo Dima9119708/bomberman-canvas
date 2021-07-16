@@ -59,13 +59,22 @@ export default function Bomberman() {
     const distanceBots = MAX_WIDTH / LENGTH_BOTS
     const DISTANCE_BOTS = []
 
+    const TIME_BOMB = 180
+    const TIME_BANG = 50
+    const TIME_DEAD = 100
+    const TIME_SCORE = 100
+    const TIME_BRICK_WALL = 80
+    const TIME_BOTS = 200
+
     const BANG = []
 
     const canvas = document.querySelector('[data-el="main"]');
+    const dashboard = document.querySelector('.dashboard');
     const ctx = canvas.getContext('2d')
 
     canvas.style.width = WIDTH + 'px'
     canvas.style.height = HEIGHT + 'px'
+    dashboard.style.width = WIDTH + 'px'
 
     canvas.width = DPI_WIDTH
     canvas.height = DPI_HEIGHT
@@ -75,10 +84,10 @@ export default function Bomberman() {
         walls: [],
 
         tick: 0,
-        time: 80,
+        time: TIME_BRICK_WALL,
 
         destroyGroup: [],
-        destroyAnimation: animation([[80, 48], [96, 48], [112, 48], [128, 48], [144, 48], [160, 48]], 80 / 6),
+        destroyAnimation: animation([[80, 48], [96, 48], [112, 48], [128, 48], [144, 48], [160, 48]], TIME_BRICK_WALL / 6),
 
         destroy(x, y) {
             for (const [i, [wallX, wallY]] of this.walls.entries()) {
@@ -120,7 +129,7 @@ export default function Bomberman() {
     }
 
     const SCORE = {
-        timeScore: 100,
+        timeScore: TIME_SCORE,
         destroyGroup: [],
 
         score: 100,
@@ -136,6 +145,7 @@ export default function Bomberman() {
 
                 if (bot.tickScore >= this.timeScore) {
                     this.score += bot.score
+                    dashboard.innerHTML = `Score: ${this.score}`
                     this.destroyGroup.splice(idx, 1)
                 }
 
@@ -192,7 +202,7 @@ export default function Bomberman() {
         spawn: [],
 
         tick: 0,
-        time: 200,
+        time: TIME_BOTS,
 
         destroyGroup: [],
 
@@ -394,11 +404,11 @@ export default function Bomberman() {
             move: false,
             activeBomb: false,
 
-            countBomb: 2,
+            countBomb: 1,
             posBomb: [],
 
             countDead: 0,
-            timeDead: 100,
+            timeDead: TIME_DEAD,
 
             upAnimation: animation([[50, 16], [82, 16]], 10),
             downAnimation: animation([[50, 0], [82, 0]], 10),
@@ -573,8 +583,8 @@ export default function Bomberman() {
         x: null,
         y: null,
 
-        timeBom: 180,
-        timeBang: 50,
+        timeBom: TIME_BOMB,
+        timeBang: TIME_BANG,
 
         frameIndex : 0,
         tickCount : 0,
@@ -749,7 +759,7 @@ export default function Bomberman() {
 
         drawImage(sx, sy, dx, dy) {
             ctx.drawImage(
-                spriteWithBG,
+                spriteWithoutBG,
                 sx,
                 sy,
                 defaultSizeSprite,
@@ -846,13 +856,16 @@ export default function Bomberman() {
                 const centerY = bot.y + (bot.height / 2)
 
                 if (centerX >= minX && centerX <= maxX &&
-                    centerY >= minY && centerY <= maxY
+                    centerY >= minY && centerY <= maxY &&
+                    bang.name !== BRICK_WALL
                     ||
                     botMinX >= minX && botMinX <= maxX &&
-                    botMinY >= minY && botMinY <= maxY
+                    botMinY >= minY && botMinY <= maxY &&
+                    bang.name !== BRICK_WALL
                     ||
                     botManX >= minX && botManX <= maxX &&
-                    botManY >= minY && botManY <= maxY
+                    botManY >= minY && botManY <= maxY &&
+                    bang.name !== BRICK_WALL
                 ) {
                     BOTS.destroy(i)
                 }
@@ -1040,6 +1053,7 @@ export default function Bomberman() {
     function reset() {
         cancelAnimationFrame(raf)
         Bomberman()
+        dashboard.innerHTML = `Score: 0`
     }
 
     function drawField() {
