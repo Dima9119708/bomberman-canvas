@@ -1,6 +1,6 @@
 import audio from "./audio";
-import bgWith from "./image/bomberman-with-bg.png";
-import bgWithout from "./image/bomberman-without-bg.png";
+import bgWith from "../image/bomberman-with-bg.png";
+import bgWithout from "../image/bomberman-without-bg.png";
 import Engine from "./Engine";
 
 const WIDTH = 500
@@ -26,15 +26,17 @@ const CONCRETE_WALL = 'CONCRETE_WALL' // не взрываються
 const BRICK_WALL = 'BRICK_WALL' // Взрывающие стены
 const EMPTY = 'FREE_ZONE'
 
-export default function Bomberman() {
-    const loadSprite = (sprite) => {
-        const image = new Image()
-        image.src = sprite
-        return image
-    }
+const loadSprite = (sprite) => {
+    const image = new Image()
+    image.src = sprite
+    return image
+}
 
-    const spriteWithBG = loadSprite(bgWith)
-    const spriteWithoutBG = loadSprite(bgWithout)
+const spriteWithBG = loadSprite(bgWith)
+const spriteWithoutBG = loadSprite(bgWithout)
+
+export default function Bomberman() {
+    let raf
 
     const FIELD = []
     const WALLS = []
@@ -531,6 +533,7 @@ export default function Bomberman() {
                     this.countDead = 0
                     this.xDead = undefined
                     this.yDead = undefined
+                    reset()
                     return
                 }
 
@@ -1034,7 +1037,13 @@ export default function Bomberman() {
         }
     }
 
+    function reset() {
+        cancelAnimationFrame(raf)
+        Bomberman()
+    }
+
     function drawField() {
+
         for (let y = 0; y < FIELD.length; y++ ) {
             for (let x = 0; x < FIELD[y].length; x++) {
                 ctx.drawImage(
@@ -1107,7 +1116,7 @@ export default function Bomberman() {
         }
     }
 
-    new Engine( {
+    new Engine({
         clear() {
             ctx.clearRect(0, 0, MAX_WIDTH, DPI_HEIGHT)
             player.walls.length = 0
@@ -1116,7 +1125,9 @@ export default function Bomberman() {
             FREE_ZONE.length = 0
             DISTANCE_BOTS.length = 0
         },
-        render() {
+        render(reqAf) {
+            raf = reqAf
+
             BOTS.setupDistanceBetweenBots()
             setupField()
             BOTS.setupSpawnBots()
@@ -1133,24 +1144,6 @@ export default function Bomberman() {
             camera.translateX(player, 2)
         }
     })
-
-    document.addEventListener('keydown', listenerKeyDown)
-    document.addEventListener('keyup', listenerKeyUp)
-
-    function listenerKeyUp() {
-        player.move = false
-    }
-
-    function listenerKeyDown(e) {
-        e.preventDefault();
-
-        if ([...control, W,S,A,D].includes(e.code)) {
-            player.move = e.code
-            player.direction = e.code
-        }
-
-        move(player, e.code)
-    }
 
     function move(person, direction) {
         switch(direction) {
@@ -1184,4 +1177,25 @@ export default function Bomberman() {
         }
     }
 
+    document.addEventListener('keydown', listenerKeyDown)
+    document.addEventListener('keyup', listenerKeyUp)
+
+    function listenerKeyUp() {
+        player.move = false
+    }
+
+    function listenerKeyDown(e) {
+        e.preventDefault();
+
+        if ([...control, W,S,A,D].includes(e.code)) {
+            player.move = e.code
+            player.direction = e.code
+        }
+
+        move(player, e.code)
+    }
+
+    return {
+        reset: reset
+    }
 }

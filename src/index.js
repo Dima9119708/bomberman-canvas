@@ -1,4 +1,5 @@
 import './styles.scss'
-import Bomberman from "./bomberman";
+import Bomberman from "./bomberman/game";
+
 
 Bomberman()
