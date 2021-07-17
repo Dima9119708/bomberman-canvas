@@ -21,8 +21,16 @@ body {
 }
 
 .container {
-  max-width: 800px;
-  margin: 5rem auto;
+  position: relative;
+  max-width: 500px;
+  margin: 30px auto;
+
+  canvas {
+    border: 5px solid gray;
+    margin: 0 auto;
+    height: 300px;
+    width: 100%;
+  }
 }
 
 .dashboard {
@@ -32,17 +40,29 @@ body {
   margin: 0 auto;
 }
 
-.card {
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  border-radius: 4px;
-  background: #fff;
-  padding: 1rem;
-  box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.2);
+.start-game {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 10;
+  background-image: url("bomberman/image/menu-title.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: black;
 
-  canvas {
-    border: 5px solid gray;
-    margin: 0 auto;
+  &__button {
+    font-family: 'BitBold', sans-serif;
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    color: #ffffff;
+    cursor: pointer;
+    background-color: transparent;
+    border: 0;
+    font-size: 20px;
   }
 }

@@ -19,6 +19,7 @@ const S = 'KeyS'
 const D = 'KeyD'
 const A = 'KeyA'
 const F = 'KeyF'
+const SPACE = 'Space'
 
 const control = [arrowUp, arrowDown, arrowLeft, arrowRight]
 
@@ -35,7 +36,11 @@ const loadSprite = (sprite) => {
 const spriteWithBG = loadSprite(bgWith)
 const spriteWithoutBG = loadSprite(bgWithout)
 
-export default function Bomberman() {
+export default function Bomberman(canvas, dashboard) {
+    const ctx = canvas.getContext('2d')
+
+    audio.stageTheme.play()
+
     let raf
 
     const FIELD = []
@@ -67,10 +72,6 @@ export default function Bomberman() {
     const TIME_BOTS = 200
 
     const BANG = []
-
-    const canvas = document.querySelector('[data-el="main"]');
-    const dashboard = document.querySelector('.dashboard');
-    const ctx = canvas.getContext('2d')
 
     canvas.style.width = WIDTH + 'px'
     canvas.style.height = HEIGHT + 'px'
@@ -160,11 +161,11 @@ export default function Bomberman() {
                 score: 100,
                 animate() {
                     return {
-                        up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
-                        down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
-                        left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 35),
-                        right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 35),
-                        destroy: animation([[96, 240], [112, 240], [128, 240], [144, 240], [160, 240]], 200 / 5)
+                        up: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 25),
+                        down: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 25),
+                        left: animation([[48, 240.3], [64, 240.3], [80, 240.3]], 25),
+                        right: animation([[0, 240.3], [16, 240.3], [32, 240.3]], 25),
+                        destroy: animation([[96, 240], [112, 240], [128, 240], [144, 240], [160, 240]], TIME_BOTS / 5)
                     }
                 }
             },
@@ -178,7 +179,7 @@ export default function Bomberman() {
                         down: animation([[0, 256], [16, 256], [32, 256]], 20),
                         left: animation([[48, 256], [64, 256], [80, 256]], 20),
                         right: animation([[0, 256], [16, 256], [32, 256]], 20),
-                        destroy: animation([[96, 256], [112, 288], [128, 288], [144, 288], [160, 288]], 200 / 5)
+                        destroy: animation([[96, 256], [112, 288], [128, 288], [144, 288], [160, 288]], TIME_BOTS / 5)
                     }
                 }
             },
@@ -505,6 +506,7 @@ export default function Bomberman() {
 
                 const [sx, sy] = this.destroyAnimation()
 
+                audio.stageTheme.pause()
                 audio.dead.play()
 
                 this.countDead++
@@ -1022,7 +1024,7 @@ export default function Bomberman() {
 
     function reset() {
         cancelAnimationFrame(raf)
-        Bomberman()
+        Bomberman(canvas, dashboard)
         document.removeEventListener('keydown', listenerKeyDown)
         document.removeEventListener('keyup', listenerKeyUp)
         dashboard.innerHTML = `Score: 0`
@@ -1158,9 +1160,6 @@ export default function Bomberman() {
             case D:
                 person.x += person.rightStep
                 break
-            case keyF :
-                person.savePosBomb()
-                break
         }
     }
 
@@ -1178,7 +1177,7 @@ export default function Bomberman() {
             player.move = true
             player.direction = e.code
         }
-        else if (e.code === F) {
+        else if (e.code === F || e.code === SPACE) {
             player.savePosBomb()
         }
     }
