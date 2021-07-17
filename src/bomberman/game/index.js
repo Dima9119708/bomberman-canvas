@@ -1116,8 +1116,6 @@ export default function Bomberman(canvas, dashboard) {
         render(reqAf) {
             raf = reqAf
 
-    console.log(BANG)
-
             BOTS.setupDistanceBetweenBots()
             setupField()
             BOTS.setupSpawnBots()
