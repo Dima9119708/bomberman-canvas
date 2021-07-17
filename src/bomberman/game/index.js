@@ -18,7 +18,7 @@ const W = 'KeyW'
 const S = 'KeyS'
 const D = 'KeyD'
 const A = 'KeyA'
-const keyF = 'KeyF'
+const F = 'KeyF'
 
 const control = [arrowUp, arrowDown, arrowLeft, arrowRight]
 
@@ -82,17 +82,19 @@ export default function Bomberman() {
     const BRICK_WALLS = {
         switch: true,
         walls: [],
-
-        tick: 0,
         time: TIME_BRICK_WALL,
-
         destroyGroup: [],
-        destroyAnimation: animation([[80, 48], [96, 48], [112, 48], [128, 48], [144, 48], [160, 48]], TIME_BRICK_WALL / 6),
 
         destroy(x, y) {
             for (const [i, [wallX, wallY]] of this.walls.entries()) {
                 if (wallX === x && wallY === y) {
-                    this.destroyGroup.push([x, y])
+                    this.destroyGroup.push(
+                        { x,
+                          y,
+                          tick: 0,
+                          destroyAnimation: animation([[80, 48], [96, 48], [112, 48], [128, 48], [144, 48], [160, 48]], TIME_BRICK_WALL / 6)
+                        }
+                    )
                     this.walls.splice(i, 1)
                 }
             }
@@ -101,26 +103,23 @@ export default function Bomberman() {
         drawDestroy() {
             if (!this.destroyGroup.length) return
 
-            this.tick++
+            for (const [idx, brick] of this.destroyGroup.entries()) {
+                brick.tick++
 
-            if (this.tick > this.time) {
-                this.tick = 0
-                this.destroyGroup.length = 0
-                this.destroyAnimation(true)
-                return
-            }
+                if (brick.tick > this.time) {
+                    this.destroyGroup.splice(idx, 1)
+                }
 
-            const [sx, sy] = this.destroyAnimation()
+                const [sx, sy] = brick.destroyAnimation()
 
-            for (const [dx, dy] of this.destroyGroup) {
                 ctx.drawImage(
                     spriteWithoutBG,
                     sx,
                     sy,
                     defaultSizeSprite,
                     defaultSizeSprite,
-                    dx * BLOCK_SIZE,
-                    dy * BLOCK_SIZE,
+                    brick.x * BLOCK_SIZE,
+                    brick.y * BLOCK_SIZE,
                     BLOCK_SIZE,
                     BLOCK_SIZE
                 )
@@ -132,12 +131,7 @@ export default function Bomberman() {
         timeScore: TIME_SCORE,
         destroyGroup: [],
 
-        score: 100,
-
-        score100: [116, 339],
-        score200: [116, 337],
-        score400: [116, 355],
-        score800: [116, 383],
+        score: 0,
 
         drawScore() {
             for (const [idx, bot] of this.destroyGroup.entries()) {
@@ -149,19 +143,10 @@ export default function Bomberman() {
                     this.destroyGroup.splice(idx, 1)
                 }
 
-                const [sx, sy] = this[`score${bot.score}`]
-
-                ctx.drawImage(
-                    spriteWithoutBG,
-                    sx,
-                    sy,
-                    12,
-                    5,
-                    bot.x,
-                    bot.y,
-                    16,
-                    9,
-                )
+                ctx.font = "10px BitBold";
+                ctx.fillStyle = "#fff";
+                const fontWidth = ctx.measureText(bot.score).width / 2
+                ctx.fillText(bot.score, bot.x + (bot.width / 2) - (fontWidth), bot.y + (bot.height / 2));
             }
         }
     }
@@ -249,88 +234,89 @@ export default function Bomberman() {
                 Object.assign(bot, bot.animate())
 
                 BOTS.spawn.push(
-                    { ...person, ...{
-                            x: x * BLOCK_SIZE,
-                            y: y * BLOCK_SIZE,
-                            height: defaultSizeSprite + 5,
-                            width: defaultSizeSprite + 5,
-                            countLoop: 0,
-                            wall: bot.wall,
-                            walls: [],
-                            tickScore: 0,
-                            score: bot.score,
-                            loop: BOTS.loops[randomNumber(BOTS.loops.length)],
-                            direction : control[randomNumber(control.length)],
-                            defaultStep: bot.defaultStep,
-                            upAnimation: bot.up,
-                            downAnimation: bot.down,
-                            leftAnimation: bot.left,
-                            rightAnimation: bot.right,
-                            destroyAnimation: bot.destroy,
+                    {
+                        x: x * BLOCK_SIZE,
+                        y: y * BLOCK_SIZE,
+                        height: defaultSizeSprite + 5,
+                        width: defaultSizeSprite + 5,
+                        countLoop: 0,
+                        wall: bot.wall,
+                        walls: [],
+                        tickScore: 0,
+                        score: bot.score,
+                        loop: BOTS.loops[randomNumber(BOTS.loops.length)],
+                        direction : control[randomNumber(control.length)],
+                        defaultStep: bot.defaultStep,
+                        upAnimation: bot.up,
+                        downAnimation: bot.down,
+                        leftAnimation: bot.left,
+                        rightAnimation: bot.right,
+                        destroyAnimation: bot.destroy,
 
-                            movement() {
-                                collision(this, [
-                                    ...WALLS,
-                                    ...this.walls,
-                                    ...player.posBomb.map(({x, y}) => [x * BLOCK_SIZE, y * BLOCK_SIZE])
-                                ])
+                        movement() {
+                            collision(this, [
+                                ...WALLS,
+                                ...this.walls,
+                                ...player.posBomb.map(({x, y}) => [x * BLOCK_SIZE, y * BLOCK_SIZE])
+                            ])
 
-                                this.countLoop++
+                            this.countLoop++
 
-                                const way = {
-                                    [arrowUp]: this.upStep,
-                                    [arrowDown]: this.downStep,
-                                    [arrowLeft]: this.leftStep,
-                                    [arrowRight]: this.rightStep
-                                }
-
-                                if (this.countLoop > this.loop) {
-                                    this.countLoop = 0
-                                    this.loop = BOTS.loops[randomNumber(BOTS.loops.length)]
-                                    this.randomDirection(way)
-                                }
-
-                                if (way[this.direction] === 0) {
-                                    this.randomDirection(way)
-                                }
-
-                                move(this, this.direction)
-
-                                switch (this.direction) {
-                                    case arrowUp: {
-                                        const [x, y] = this.upAnimation()
-                                        ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                                        break
-                                    }
-                                    case arrowDown: {
-                                        const [x, y] = this.downAnimation()
-                                        ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                                        break
-                                    }
-                                    case arrowLeft: {
-                                        const [x, y] = this.leftAnimation()
-                                        ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                                        break
-                                    }
-                                    case arrowRight: {
-                                        const [x, y] = this.rightAnimation()
-                                        ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
-                                        break
-                                    }
-                                }
-                            },
-
-                            randomDirection(way) {
-                                const idx = randomNumber(Object.keys(way).length)
-                                this.direction = Object.keys(way)[idx]
+                            const way = {
+                                [arrowUp]: this.upStep,
+                                [arrowDown]: this.downStep,
+                                [arrowLeft]: this.leftStep,
+                                [arrowRight]: this.rightStep
                             }
-                        }}
-                )
+
+                            if (this.countLoop > this.loop) {
+                                this.countLoop = 0
+                                this.loop = BOTS.loops[randomNumber(BOTS.loops.length)]
+                                this.randomDirection(way)
+                            }
+
+                            if (way[this.direction] === 0) {
+                                this.randomDirection(way)
+                            }
+
+                            move(this, this.direction)
+
+                            switch (this.direction) {
+                                case arrowUp: {
+                                    const [x, y] = this.upAnimation()
+                                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                    break
+                                }
+                                case arrowDown: {
+                                    const [x, y] = this.downAnimation()
+                                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                    break
+                                }
+                                case arrowLeft: {
+                                    const [x, y] = this.leftAnimation()
+                                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                    break
+                                }
+                                case arrowRight: {
+                                    const [x, y] = this.rightAnimation()
+                                    ctx.drawImage(spriteWithoutBG, x, y, defaultSizeSprite, defaultSizeSprite, this.x, this.y, this.width, this.height)
+                                    break
+                                }
+                            }
+                        },
+
+                        randomDirection(way) {
+                            const idx = randomNumber(Object.keys(way).length)
+                            this.direction = Object.keys(way)[idx]
+                        }
+                })
             })
         },
 
         movement() {
-            this.spawn.forEach(bot => bot.movement())
+            this.spawn.forEach(bot => {
+                bot.movement()
+            })
         },
 
         destroy(idx) {
@@ -368,30 +354,7 @@ export default function Bomberman() {
         }
     }
 
-    const person = {
-        x: null,
-        y: null,
-
-        height: 0,
-        width: 0,
-
-        defaultStep: 0,
-        upStep: null,
-        downStep: null,
-        leftStep: null,
-        rightStep: null,
-
-        direction : null,
-
-        walls: [],
-
-        upAnimation: null,
-        downAnimation: null,
-        leftAnimation: null,
-        rightAnimation: null,
-    }
-
-    const player = { ...person, ...{
+    const player = {
             x: BLOCK_SIZE + 5,
             y: BLOCK_SIZE + 5,
             xDead: undefined,
@@ -399,12 +362,13 @@ export default function Bomberman() {
             dead: false,
             height: defaultSizeSprite + 5,
             width: defaultSizeSprite,
-            defaultStep: 5,
+            defaultStep: 1.5,
             direction : arrowRight,
             move: false,
             activeBomb: false,
+            walls: [],
 
-            countBomb: 1,
+            countBomb: 10,
             posBomb: [],
 
             countDead: 0,
@@ -443,8 +407,24 @@ export default function Bomberman() {
             },
 
             movement() {
+                if (this.move) move(player, this.direction)
+
                 collision(this, [...WALLS, ...this.walls])
 
+                this.drawMove()
+
+                return this
+            },
+
+            destroy() {
+                this.xDead = this.x
+                this.yDead = this.y
+
+                this.x = undefined
+                this.x = undefined
+            },
+
+            drawMove() {
                 if (!this.move) {
                     switch (this.direction) {
                         case arrowUp:
@@ -518,16 +498,6 @@ export default function Bomberman() {
                         }
                     }
                 }
-
-                return this
-            },
-
-            destroy() {
-                this.xDead = this.x
-                this.yDead = this.y
-
-                this.x = undefined
-                this.x = undefined
             },
 
             drawDestroy() {
@@ -577,7 +547,7 @@ export default function Bomberman() {
                         })
                 }
             }
-        }}
+    }
 
     const bomb = {
         x: null,
@@ -630,10 +600,10 @@ export default function Bomberman() {
                 this.env[idx] = {}
             }
 
-            if (bomb.bangTick > this.timeBang) {
+            if (bomb.bangTick >= this.timeBang) {
                 bomb.pointsDestruction.forEach(coords => {
                     for (const [idx, bang] of BANG.entries()) {
-                        if (coords === bang) {
+                        if (coords.x === bang.x && coords.y === bang.y) {
                             BANG.splice(idx, 1)
                         }
                     }
@@ -1053,6 +1023,8 @@ export default function Bomberman() {
     function reset() {
         cancelAnimationFrame(raf)
         Bomberman()
+        document.removeEventListener('keydown', listenerKeyDown)
+        document.removeEventListener('keyup', listenerKeyUp)
         dashboard.innerHTML = `Score: 0`
     }
 
@@ -1142,6 +1114,7 @@ export default function Bomberman() {
         render(reqAf) {
             raf = reqAf
 
+
             BOTS.setupDistanceBetweenBots()
             setupField()
             BOTS.setupSpawnBots()
@@ -1202,11 +1175,12 @@ export default function Bomberman() {
         e.preventDefault();
 
         if ([...control, W,S,A,D].includes(e.code)) {
-            player.move = e.code
+            player.move = true
             player.direction = e.code
         }
-
-        move(player, e.code)
+        else if (e.code === F) {
+            player.savePosBomb()
+        }
     }
 
     return {
