@@ -96,7 +96,7 @@ export default function Bomberman(canvas, dashboard) {
                           destroyAnimation: animation([[80, 48], [96, 48], [112, 48], [128, 48], [144, 48], [160, 48]], TIME_BRICK_WALL / 6)
                         }
                     )
-                    this.walls.splice(i, 1)
+                    this.walls[i] = [-1, -1]
                 }
             }
         },
@@ -606,7 +606,7 @@ export default function Bomberman(canvas, dashboard) {
                 bomb.pointsDestruction.forEach(coords => {
                     for (const [idx, bang] of BANG.entries()) {
                         if (coords.x === bang.x && coords.y === bang.y) {
-                            BANG.splice(idx, 1)
+                            BANG[idx] = { x: -1, y: -1, name: null }
                         }
                     }
                 })
@@ -1116,6 +1116,7 @@ export default function Bomberman(canvas, dashboard) {
         render(reqAf) {
             raf = reqAf
 
+    console.log(BANG)
 
             BOTS.setupDistanceBetweenBots()
             setupField()
